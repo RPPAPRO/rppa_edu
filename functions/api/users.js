@@ -1,5 +1,16 @@
-export async function onRequest() {
-  return new Response(JSON.stringify({ status: "ok", users: [] }), {
-    headers: { "content-type": "application/json" },
-  });
+export async function onRequest(ctx) {
+  try {
+    const { results } = await ctx.env.DB
+      .prepare("SELECT id, name, email, created_at FROM users ORDER BY id DESC")
+      .all();
+
+    return new Response(JSON.stringify({ users: results ?? [] }), {
+      headers: { "content-type": "application/json" },
+    });
+  } catch (e) {
+    return new Response(JSON.stringify({ error: String(e) }), {
+      status: 500,
+      headers: { "content-type": "application/json" },
+    });
+  }
 }
