@@ -1,5 +1,5 @@
-export const onRequest = async () => {
+export async function onRequest() {
   return new Response(JSON.stringify({ status: "ok", users: [] }), {
-    headers: { "Content-Type": "application/json" },
+    headers: { "content-type": "application/json" },
   });
-};
+}
