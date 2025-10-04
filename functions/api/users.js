@@ -1,6 +1,6 @@
 export async function onRequest(ctx) {
   try {
-    const { results } = await ctx.env.DB
+    const { results } = await ctx.env.edu_rppa_db
       .prepare("SELECT id, name, email, created_at FROM users ORDER BY id DESC")
       .all();
 
