@@ -1,42 +1,32 @@
 // functions/api/users.js
 
-/** ---------------------------
- * Универсальный логгер
- * ----------------------------
- * Использование:
- *  - log(ctx, "info", "message", { any: "extra" })
- *  - json(ctx, data, 200, meta) -> вернёт Response И залогирует ответ
- */
 
 function meta(ctx) {
   const req = ctx.request;
   const h = req.headers;
+  const url = new URL(req.url);
   return {
     ts: new Date().toISOString(),
     method: req.method,
-    path: new URL(req.url).pathname + new URL(req.url).search,
+    path: url.pathname + url.search,
     ray: h.get("cf-ray") || h.get("x-request-id") || null,
     ip: h.get("cf-connecting-ip") || null,
     ua: h.get("user-agent") || null,
   };
 }
 
-function log(ctx, level, message, extra) {
+function log(ctx, level, event, extra) {
   const base = meta(ctx);
-  const payload = { ...base, level, message };
-  if (extra && Object.keys(extra).length) {
-    payload.extra = extra;
-  }
-  // Красиво печатаем JSON в логи
-  console.log(JSON.stringify(payload, null, 2));
+  const payload = { ...base, level, event };
+  if (extra && Object.keys(extra).length) payload.extra = extra;
+  // ВАЖНО: передаём объект, НЕ строку → Cloudflare покажет JSON нормально
+  console.log(payload);
 }
 
 function json(ctx, data, status = 200, extraMeta = {}) {
-  // Логируем ответ (безопасно)
   log(ctx, status >= 400 ? "error" : "info", "response", {
     status,
-    // Чтобы не «забивать» лог огромными объектами, ограничим визуально:
-    dataPreview: preview(data),
+    dataPreview: preview(data), // объект, не строка
     ...extraMeta,
   });
   return new Response(JSON.stringify(data), {
@@ -48,9 +38,10 @@ function json(ctx, data, status = 200, extraMeta = {}) {
 function preview(obj, max = 800) {
   try {
     const s = JSON.stringify(obj);
-    return s.length > max ? s.slice(0, max) + "…(truncated)" : obj;
-  } catch {
+    if (s.length > max) return { truncated: true, slice: JSON.parse(s.slice(0, max)) };
     return obj;
+  } catch {
+    return { note: "unserializable" };
   }
 }
 
@@ -70,10 +61,7 @@ export async function onRequest(ctx) {
   const url = new URL(request.url);
 
   const t0 = performance.now();
-  log(ctx, "info", "request.start", {
-    method,
-    path: url.pathname + url.search,
-  });
+  log(ctx, "info", "request.start", { method, path: url.pathname + url.search });
 
   try {
     // -------- GET --------
@@ -121,7 +109,7 @@ export async function onRequest(ctx) {
           .prepare("INSERT INTO users (id, name, email, created_at) VALUES (?, ?, ?, ?)")
           .bind(id, name, email, createdAt)
           .run();
-        log(ctx, "info", "post.db.insert", { changes: res?.meta?.changes ?? null });
+        log(ctx, "info", "post.db.insert", { changes: res?.meta?.changes ?? null, id });
       } catch (e) {
         const es = String(e);
         log(ctx, "error", "post.db.error", { error: es });
@@ -148,7 +136,6 @@ export async function onRequest(ctx) {
         return json(ctx, { error: "nothing to update" }, 400, doneMeta(t0));
       }
 
-      // Строим UPDATE динамически
       const fields = [];
       const binds = [];
       if (name != null && name !== "") { fields.push("name = ?"); binds.push(name); }
@@ -161,7 +148,7 @@ export async function onRequest(ctx) {
           .prepare(`UPDATE users SET ${fields.join(", ")} WHERE id = ?`)
           .bind(...binds)
           .run();
-        log(ctx, "info", "put.db.update", { changes: res?.meta?.changes ?? null });
+        log(ctx, "info", "put.db.update", { changes: res?.meta?.changes ?? null, id });
         if (res.meta.changes === 0) return json(ctx, { error: "not found" }, 404, doneMeta(t0));
       } catch (e) {
         const es = String(e);
@@ -185,7 +172,7 @@ export async function onRequest(ctx) {
       if (!Number.isInteger(id)) return json(ctx, { error: "id must be integer" }, 400, doneMeta(t0));
 
       const res = await db.prepare("DELETE FROM users WHERE id = ?").bind(id).run();
-      log(ctx, "info", "delete.db.delete", { changes: res?.meta?.changes ?? null });
+      log(ctx, "info", "delete.db.delete", { changes: res?.meta?.changes ?? null, id });
       if (res.meta.changes === 0) return json(ctx, { error: "not found" }, 404, doneMeta(t0));
 
       return json(ctx, { ok: true }, 200, doneMeta(t0));
@@ -193,7 +180,6 @@ export async function onRequest(ctx) {
 
     return json(ctx, { error: "Method Not Allowed" }, 405, doneMeta(t0));
   } catch (e) {
-    // Глобальная обработка ошибок
     log(ctx, "error", "unhandled.error", { error: String(e) });
     return json(ctx, { error: String(e) }, 500, doneMeta(t0));
   }
