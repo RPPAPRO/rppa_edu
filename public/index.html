@@ -1,14 +1,459 @@
 <!doctype html>
 <html lang="ru">
-<meta charset="utf-8"/>
-<title>edu_rppa</title>
-<h1>edu_rppa</h1>
-<p>Ответ <code>/api/users</code>:</p>
-<pre id="out">загрузка…</pre>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>edu_rppa · Users CRUD</title>
+    <style>
+        :root{
+          --bg:#0b0f17;
+          --panel:#121826;
+          --panel-2:#0f1522;
+          --text:#e6e9ef;
+          --muted:#9aa3b2;
+          --ok:#1fd6a8;
+          --warn:#f6c177;
+          --err:#ff6b6b;
+          --grad1:#7c4dff; /* violet */
+          --grad2:#00b4ff; /* blue  */
+          --focus:0 0 0 2px rgba(124,77,255,.55),0 0 0 6px rgba(0,180,255,.35);
+        }
+        *{box-sizing:border-box}
+        html,body{height:100%}
+        body{
+          margin:0; color:var(--text); background:
+          radial-gradient(1200px 800px at 120% -20%, rgba(0,180,255,.12), transparent 50%),
+          radial-gradient(900px 600px at -10% 120%, rgba(124,77,255,.12), transparent 55%),
+          var(--bg);
+          font:14px/1.45 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial;
+        }
+
+        /* Header */
+        .topbar{
+          position:sticky; top:0; z-index:20; display:flex; align-items:center; gap:16px;
+          padding:14px 20px; background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(0,0,0,.0));
+          border-bottom:1px solid rgba(255,255,255,.06);
+          backdrop-filter: blur(8px);
+        }
+        .logo{
+          font-weight:800; letter-spacing:.3px;
+          background:linear-gradient(90deg,var(--grad1),var(--grad2));
+          -webkit-background-clip:text;background-clip:text; color:transparent; font-size:16px;
+        }
+        .subtitle{color:var(--muted)}
+
+        /* Layout */
+        .wrap{display:grid; grid-template-columns:240px 1fr; min-height:calc(100vh - 56px);}
+        .sidebar{
+          border-right:1px solid rgba(255,255,255,.06);
+          background:linear-gradient(180deg, rgba(255,255,255,.03), transparent 30%);
+          padding:16px;
+        }
+        .nav{display:flex; flex-direction:column; gap:8px;}
+        .nav a{
+          text-decoration:none; color:var(--text);
+          padding:10px 12px; border-radius:10px;
+          background:var(--panel-2);
+          border:1px solid rgba(255,255,255,.06);
+          transition:.16s transform,.16s box-shadow,.16s background;
+        }
+        .nav a:hover{transform:translateY(-1px); box-shadow:0 6px 18px rgba(0,0,0,.25)}
+        .nav a.active{
+          background:linear-gradient(180deg, rgba(124,77,255,.16), rgba(0,180,255,.10));
+          border-image: linear-gradient(90deg,var(--grad1),var(--grad2)) 1;
+          border:1px solid transparent;
+          box-shadow:0 0 0 1px rgba(124,77,255,.35) inset, 0 0 22px rgba(124,77,255,.20) inset;
+        }
+
+        .content{padding:20px; display:grid; gap:16px;}
+        .card{
+          background:var(--panel); border:1px solid rgba(255,255,255,.06); border-radius:14px;
+          padding:16px; box-shadow:0 10px 30px rgba(0,0,0,.28);
+        }
+        .card h2{margin:0 0 12px 0; font-size:16px;}
+        .desc{color:var(--muted); margin-top:-6px; margin-bottom:10px}
+
+        /* Forms */
+        .form{display:grid; gap:12px; max-width:720px}
+        .row{display:grid; grid-template-columns:180px 1fr; gap:12px; align-items:center}
+        label{color:#c9d2e1}
+        input,select,button,textarea{
+          font:14px/1.3 inherit; color:var(--text)
+        }
+        input,textarea,select{
+          background:#0e1420; border:1px solid rgba(255,255,255,.08); border-radius:12px; padding:10px 12px;
+          outline:none; transition:.15s box-shadow,.15s border-color;
+        }
+        input:focus,textarea:focus,select:focus{box-shadow:var(--focus); border-color:transparent}
+        .hint{color:var(--muted); font-size:12px; margin-top:-6px}
+        .actions{display:flex; gap:10px; flex-wrap:wrap}
+        .btn{
+          border:0; border-radius:12px; padding:10px 14px; cursor:pointer;
+          background:linear-gradient(90deg,var(--grad1),var(--grad2));
+          box-shadow:0 6px 22px rgba(124,77,255,.35);
+        }
+        .btn.secondary{
+          background:#162032; border:1px solid rgba(255,255,255,.08);
+          box-shadow:0 0 0 transparent;
+        }
+        .btn:disabled{opacity:.6; cursor:default}
+        .danger{background:linear-gradient(90deg,#ff6b6b,#ff8fab); box-shadow:0 6px 22px rgba(255,107,107,.35)}
+
+        /* Table */
+        .table-wrap{overflow:auto; border:1px solid rgba(255,255,255,.06); border-radius:12px}
+        table{width:100%; border-collapse:collapse; min-width:640px; background:#0e1420}
+        th,td{padding:10px 12px; border-bottom:1px solid rgba(255,255,255,.06)}
+        th{text-align:left; color:#c8d0df; background:#0f1726; position:sticky; top:0}
+        tr:hover td{background:rgba(124,77,255,.05)}
+
+        /* Output/JSON */
+        pre{
+          margin:0; padding:12px; background:#0e1420; border:1px solid rgba(255,255,255,.08);
+          border-radius:12px; overflow:auto; max-height:380px;
+        }
+
+        /* Status bar */
+        .statusbar{
+          display:flex; gap:12px; align-items:center; flex-wrap:wrap; color:var(--muted);
+        }
+        .badge{display:inline-flex; align-items:center; gap:8px; padding:6px 10px; border-radius:999px; border:1px solid rgba(255,255,255,.08); background:#0e1420}
+        .badge.ok{color:var(--ok); border-color:rgba(31,214,168,.45)}
+        .badge.err{color:var(--err); border-color:rgba(255,107,107,.45)}
+        .spacer{flex:1}
+
+        /* Top loader */
+        .loader{position:fixed; left:0; top:56px; height:3px; width:0; background:linear-gradient(90deg,var(--grad1),var(--grad2));
+          transition:width .3s ease; z-index:30}
+
+        /* Toasts */
+        .toasts{position:fixed; right:16px; top:70px; display:grid; gap:10px; z-index:40}
+        .toast{
+          background:var(--panel); border:1px solid rgba(255,255,255,.10); padding:12px 14px; border-radius:12px;
+          box-shadow:0 10px 30px rgba(0,0,0,.32); min-width:220px; max-width:360px;
+        }
+        .toast.ok{border-color:rgba(31,214,168,.45)}
+        .toast.err{border-color:rgba(255,107,107,.45)}
+
+        /* Mobile */
+        @media (max-width: 860px){
+          .wrap{grid-template-columns:1fr}
+          .sidebar{position:sticky; top:56px; z-index:15}
+          .row{grid-template-columns:1fr}
+        }
+    </style>
+</head>
+<body>
+<div class="topbar">
+    <div class="logo">edu_rppa · Users CRUD</div>
+    <div class="subtitle">Cloudflare Pages + Functions + D1</div>
+    <div class="spacer"></div>
+    <a class="badge" href="#/list" title="Показать список">#/list</a>
+</div>
+
+<div class="loader" id="loader"></div>
+<div class="toasts" id="toasts"></div>
+
+<div class="wrap">
+    <aside class="sidebar">
+        <nav class="nav" id="nav">
+            <a href="#/list"   data-route="/list">List (GET)</a>
+            <a href="#/get"    data-route="/get">Get by ID (GET)</a>
+            <a href="#/create" data-route="/create">Create (POST)</a>
+            <a href="#/update" data-route="/update">Update (PUT)</a>
+            <a href="#/delete" data-route="/delete">Delete (DELETE)</a>
+        </nav>
+    </aside>
+
+    <main class="content">
+        <!-- LIST -->
+        <section class="card route" data-route="/list">
+            <h2>List users</h2>
+            <div class="desc">GET <code>/api/users</code>. Локальная фильтрация по имени/email.</div>
+            <div class="actions">
+                <button class="btn" id="btn-list-refresh">Refresh</button>
+                <input id="list-filter" placeholder="Фильтр по имени/email…" />
+            </div>
+            <div class="table-wrap" style="margin-top:12px">
+                <table id="users-table">
+                    <thead><tr><th>ID</th><th>Name</th><th>Email</th><th>Created At</th></tr></thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            <div class="statusbar" style="margin-top:10px">
+                <div class="badge" id="list-status">status: –</div>
+                <div class="badge" id="list-time">time: – ms</div>
+                <div class="spacer"></div>
+            </div>
+        </section>
+
+        <!-- GET BY ID -->
+        <section class="card route" data-route="/get" hidden>
+            <h2>Get user by ID</h2>
+            <div class="desc">GET <code>/api/users?id=…</code></div>
+            <form class="form" id="form-get">
+                <div class="row">
+                    <label for="get-id">ID (integer)</label>
+                    <input id="get-id" type="number" placeholder="Напр. 1759617494321" required />
+                </div>
+                <div class="actions">
+                    <button class="btn" type="submit" id="btn-get">Fetch</button>
+                    <button class="btn secondary" type="button" id="btn-get-clear">Clear</button>
+                </div>
+                <div class="hint">Покажет одного пользователя или <code>null</code>.</div>
+            </form>
+            <div style="margin-top:10px">
+                <pre id="get-output">—</pre>
+            </div>
+            <div class="statusbar" style="margin-top:10px">
+                <div class="badge" id="get-status">status: –</div>
+                <div class="badge" id="get-time">time: – ms</div>
+                <div class="spacer"></div>
+            </div>
+        </section>
+
+        <!-- CREATE -->
+        <section class="card route" data-route="/create" hidden>
+            <h2>Create user</h2>
+            <div class="desc">POST <code>/api/users</code></div>
+            <form class="form" id="form-create">
+                <div class="row">
+                    <label for="create-name">Name</label>
+                    <input id="create-name" placeholder="Alice" required />
+                </div>
+                <div class="row">
+                    <label for="create-email">Email</label>
+                    <input id="create-email" type="email" placeholder="alice@example.com" required />
+                </div>
+                <div class="actions">
+                    <button class="btn" type="submit" id="btn-create">Create</button>
+                    <button class="btn secondary" type="button" id="btn-create-clear">Clear</button>
+                </div>
+                <div class="hint">При успехе вернётся <code>{ ok: true, id }</code>.</div>
+            </form>
+            <div class="statusbar" style="margin-top:10px">
+                <div class="badge" id="create-status">status: –</div>
+                <div class="badge" id="create-time">time: – ms</div>
+                <div class="spacer"></div>
+            </div>
+        </section>
+
+        <!-- UPDATE -->
+        <section class="card route" data-route="/update" hidden>
+            <h2>Update user</h2>
+            <div class="desc">PUT <code>/api/users</code></div>
+            <form class="form" id="form-update">
+                <div class="row">
+                    <label for="update-id">ID (required)</label>
+                    <input id="update-id" type="number" placeholder="id пользователя" required />
+                </div>
+                <div class="row">
+                    <label for="update-name">Name (optional)</label>
+                    <input id="update-name" placeholder="Новое имя (опционально)" />
+                </div>
+                <div class="row">
+                    <label for="update-email">Email (optional)</label>
+                    <input id="update-email" type="email" placeholder="Новый email (опционально)" />
+                </div>
+                <div class="actions">
+                    <button class="btn" type="submit" id="btn-update">Update</button>
+                    <button class="btn secondary" type="button" id="btn-update-clear">Clear</button>
+                </div>
+                <div class="hint">Можно менять одно поле или оба. На email действует UNIQUE.</div>
+            </form>
+            <div class="statusbar" style="margin-top:10px">
+                <div class="badge" id="update-status">status: –</div>
+                <div class="badge" id="update-time">time: – ms</div>
+                <div class="spacer"></div>
+            </div>
+        </section>
+
+        <!-- DELETE -->
+        <section class="card route" data-route="/delete" hidden>
+            <h2>Delete user</h2>
+            <div class="desc">DELETE <code>/api/users?id=…</code> (или body)</div>
+            <form class="form" id="form-delete">
+                <div class="row">
+                    <label for="delete-id">ID (required)</label>
+                    <input id="delete-id" type="number" placeholder="id пользователя" required />
+                </div>
+                <div class="actions">
+                    <button class="btn danger" type="submit" id="btn-delete">Delete</button>
+                    <button class="btn secondary" type="button" id="btn-delete-clear">Clear</button>
+                </div>
+                <div class="hint">Перед удалением спросим подтверждение.</div>
+            </form>
+            <div class="statusbar" style="margin-top:10px">
+                <div class="badge" id="delete-status">status: –</div>
+                <div class="badge" id="delete-time">time: – ms</div>
+                <div class="spacer"></div>
+            </div>
+        </section>
+    </main>
+</div>
+
 <script>
-    fetch('/api/users')
-      .then(r => r.json())
-      .then(d => { document.getElementById('out').textContent = JSON.stringify(d, null, 2); })
-      .catch(e => { document.getElementById('out').textContent = String(e); });
+    // -------- Helpers --------
+    const $ = sel => document.querySelector(sel);
+    const $$ = sel => [...document.querySelectorAll(sel)];
+    const loader = $('#loader');
+    const toasts = $('#toasts');
+    const nav = $('#nav');
+
+    function setActiveRoute(route){
+      $$('.nav a').forEach(a => a.classList.toggle('active', a.dataset.route === route));
+      $$('.route').forEach(s => s.hidden = s.dataset.route !== route);
+    }
+
+    function startLoading(){ loader.style.width='25%'; setTimeout(()=>loader.style.width='80%',10); }
+    function stopLoading(){ loader.style.width='100%'; setTimeout(()=>loader.style.width='0',350); }
+
+    function toast(msg, kind='ok', timeout=2600){
+      const el = document.createElement('div');
+      el.className = 'toast '+kind;
+      el.textContent = msg;
+      toasts.appendChild(el);
+      setTimeout(()=>{ el.style.opacity='0'; setTimeout(()=>el.remove(),260); }, timeout);
+    }
+
+    function setStatus(where, code, ms){
+      $(`#${where}-status`).textContent = 'status: '+code;
+      $(`#${where}-time`).textContent = 'time: '+ms+' ms';
+      const ok = code>=200 && code<300;
+      $(`#${where}-status`).className = 'badge '+(ok?'ok':'err');
+    }
+
+    async function request(where, method, url, body){
+      const t0 = performance.now();
+      startLoading();
+      try{
+        const res = await fetch(url, {
+          method,
+          headers: body ? { 'content-type':'application/json' } : undefined,
+          body: body ? JSON.stringify(body) : undefined
+        });
+        const text = await res.text();
+        let data;
+        try { data = text ? JSON.parse(text) : null; } catch { data = { raw:text }; }
+        const dt = Math.round(performance.now() - t0);
+        setStatus(where, res.status, dt);
+        if(!res.ok) throw Object.assign(new Error((data && data.error) || text || res.statusText), { status: res.status, data });
+        return data;
+      } finally {
+        stopLoading();
+      }
+    }
+
+    // -------- List --------
+    const tableBody = $('#users-table tbody');
+    const filterInput = $('#list-filter');
+    $('#btn-list-refresh').addEventListener('click', loadList);
+    filterInput.addEventListener('input', applyFilter);
+
+    let cachedUsers = [];
+    async function loadList(){
+      const data = await request('list','GET','/api/users');
+      cachedUsers = data.users || [];
+      renderTable(cachedUsers);
+    }
+    function renderTable(rows){
+      tableBody.innerHTML = rows.map(r => `
+        <tr>
+          <td>${escapeHtml(r.id)}</td>
+          <td>${escapeHtml(r.name)}</td>
+          <td>${escapeHtml(r.email)}</td>
+          <td>${escapeHtml(r.created_at)}</td>
+        </tr>
+      `).join('');
+    }
+    function applyFilter(){
+      const q = filterInput.value.trim().toLowerCase();
+      if(!q) return renderTable(cachedUsers);
+      const out = cachedUsers.filter(u =>
+        String(u.name||'').toLowerCase().includes(q) ||
+        String(u.email||'').toLowerCase().includes(q)
+      );
+      renderTable(out);
+    }
+
+    // -------- Get by ID --------
+    const getForm = $('#form-get');
+    const getOut = $('#get-output');
+    $('#btn-get-clear').addEventListener('click', ()=>{ $('#get-id').value=''; getOut.textContent='—'; setStatus('get','–','–'); });
+    getForm.addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      const id = Number($('#get-id').value);
+      if(!Number.isInteger(id)) return toast('ID должен быть целым числом','err');
+      try{
+        const data = await request('get','GET',`/api/users?id=${id}`);
+        getOut.textContent = JSON.stringify(data, null, 2);
+      }catch(err){ getOut.textContent = (err.data && JSON.stringify(err.data,null,2)) || err.message; toast('Ошибка получения','err'); }
+    });
+
+    // -------- Create --------
+    const createForm = $('#form-create');
+    $('#btn-create-clear').addEventListener('click', ()=>{ $('#create-name').value=''; $('#create-email').value=''; setStatus('create','–','–'); });
+    createForm.addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      const name = $('#create-name').value.trim();
+      const email = $('#create-email').value.trim();
+      if(!name || !email) return toast('Заполните name и email','err');
+      try{
+        const data = await request('create','POST','/api/users', { name, email });
+        toast('Created: id '+data.id,'ok');
+        // Авто-обновление списка, если открыта вкладка List
+        if(location.hash === '#/list'){ loadList(); }
+        // Сброс формы
+        $('#create-name').value=''; $('#create-email').value='';
+      }catch(err){ toast(err.message || 'Create error','err'); }
+    });
+
+    // -------- Update --------
+    const updateForm = $('#form-update');
+    $('#btn-update-clear').addEventListener('click', ()=>{ $('#update-id').value=''; $('#update-name').value=''; $('#update-email').value=''; setStatus('update','–','–'); });
+    updateForm.addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      const id = Number($('#update-id').value);
+      const name = $('#update-name').value.trim();
+      const email = $('#update-email').value.trim();
+      if(!Number.isInteger(id)) return toast('ID должен быть целым числом','err');
+      if(!name && !email) return toast('Укажите новое name и/или email','err');
+      try{
+        await request('update','PUT','/api/users', { id, name: name || undefined, email: email || undefined });
+        toast('Updated','ok');
+        if(location.hash === '#/list'){ loadList(); }
+      }catch(err){ toast(err.message || 'Update error','err'); }
+    });
+
+    // -------- Delete --------
+    const deleteForm = $('#form-delete');
+    $('#btn-delete-clear').addEventListener('click', ()=>{ $('#delete-id').value=''; setStatus('delete','–','–'); });
+    deleteForm.addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      const id = Number($('#delete-id').value);
+      if(!Number.isInteger(id)) return toast('ID должен быть целым числом','err');
+      if(!confirm(`Удалить пользователя id=${id}?`)) return;
+      try{
+        await request('delete','DELETE',`/api/users?id=${id}`);
+        toast('Deleted','ok');
+        if(location.hash === '#/list'){ loadList(); }
+        $('#delete-id').value='';
+      }catch(err){ toast(err.message || 'Delete error','err'); }
+    });
+
+    // -------- Routing --------
+    function navigate(){
+      const route = (location.hash.slice(1) || '/list');
+      setActiveRoute(route);
+      if(route==='/list'){ loadList().catch(()=>{}); }
+    }
+    window.addEventListener('hashchange', navigate);
+    if(!location.hash) location.hash = '#/list';
+    navigate();
+
+    // -------- Utils --------
+    function escapeHtml(s){
+      return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
 </script>
+</body>
 </html>
