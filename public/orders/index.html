@@ -13,7 +13,7 @@
           grid-template-columns: 36px 1.2fr 2fr 0.7fr auto;
           gap:10px; align-items:center;
           padding:10px 12px; border:1px solid rgba(255,255,255,.08); border-radius:10px;
-          background:#0e1420; /* плоско, без тени */
+          background:#0e1420;
         }
         .row-item img{width:32px;height:32px;object-fit:cover;border-radius:6px;border:1px solid rgba(255,255,255,.08)}
         .row-item .name{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -21,12 +21,28 @@
         .qty{display:flex;align-items:center;gap:6px;justify-self:end}
         .qty input{width:70px;text-align:center}
         .totals{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+
+        /* Receipt */
+        #receipt {display:none;}
+        #receipt.show {display:block;}
+        .receipt-head{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+        .pill{padding:6px 10px;border-radius:999px;border:1px solid rgba(255,255,255,.12);background:#0e1420}
+        .kv{display:grid;grid-template-columns:160px 1fr;gap:6px;margin:10px 0}
+        .kv div{padding:6px 0;border-bottom:1px solid rgba(255,255,255,.06)}
+        .rtable{overflow:auto;border:1px solid rgba(255,255,255,.08);border-radius:12px}
+        .rtable table{width:100%;min-width:640px;border-collapse:collapse;background:#0e1420}
+        .rtable th,.rtable td{padding:10px 12px;border-bottom:1px solid rgba(255,255,255,.06)}
+        .rtable th{background:#0f1726;text-align:left}
+        .right{text-align:right}
+        .foot-total{display:flex;justify-content:flex-end;margin-top:10px}
+        .foot-total .sum{font-weight:800}
         @media(max-width:900px){
           .row-item{grid-template-columns:32px 1fr;grid-auto-rows:auto}
           .row-item .name{grid-column:2}
           .row-item .desc{grid-column:2}
           .row-item .price{grid-column:2}
           .row-item .qty{grid-column:2;justify-self:start}
+          .kv{grid-template-columns:1fr}
         }
     </style>
 </head>
@@ -47,7 +63,7 @@
 <main class="content">
     <section class="card">
         <h2>Оформление заказа</h2>
-        <div class="desc">Выберите количество; ниже — JSON корзины и cookies.</div>
+        <div class="desc">Выберите количество; ниже — JSON корзины (с пользователем и итогом) и cookies.</div>
 
         <div class="actions">
             <button class="btn" id="btn-load">Обновить список товаров</button>
@@ -64,7 +80,7 @@
 
         <div class="mt12" style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
             <div>
-                <h3 style="margin:6px 0">Cart JSON</h3>
+                <h3 style="margin:6px 0">Cart JSON (payload для POST /api/orders)</h3>
                 <pre id="cart-json">—</pre>
             </div>
             <div>
@@ -75,7 +91,32 @@
 
         <div class="actions mt12">
             <button class="btn" id="btn-create">Создать заказ</button>
+            <button class="btn secondary" id="btn-hide-receipt" style="display:none">Скрыть квитанцию</button>
         </div>
+
+        <section class="card" id="receipt">
+            <div class="receipt-head">
+                <h3 style="margin:0">Квитанция заказа</h3>
+                <span class="pill" id="r-id">№ —</span>
+                <span class="pill" id="r-date">—</span>
+                <span class="pill" id="r-sum">Итого: 0.00</span>
+            </div>
+
+            <div class="kv">
+                <div>Покупатель (имя)</div><div id="r-name">—</div>
+                <div>Покупатель (e-mail)</div><div id="r-email">—</div>
+            </div>
+
+            <div class="rtable">
+                <table>
+                    <thead>
+                    <tr><th>Product ID</th><th>Название</th><th class="right">Цена</th><th class="right">Кол-во</th><th class="right">Сумма</th></tr>
+                    </thead>
+                    <tbody id="r-items"></tbody>
+                </table>
+            </div>
+            <div class="foot-total"><div class="sum" id="r-sum-bottom">Итого: 0.00</div></div>
+        </section>
 
         <div class="statusbar mt10">
             <div class="badge" id="orders-status">status: –</div>
@@ -98,22 +139,44 @@
     const cartPre = document.getElementById('cart-json');
     const cookiesPre = document.getElementById('cookies-json');
 
+    // receipt elements
+    const receipt = document.getElementById('receipt');
+    const rId = document.getElementById('r-id');
+    const rDate = document.getElementById('r-date');
+    const rSum = document.getElementById('r-sum');
+    const rItems = document.getElementById('r-items');
+    const rSumBottom = document.getElementById('r-sum-bottom');
+    const rName = document.getElementById('r-name');
+    const rEmail = document.getElementById('r-email');
+    const btnHideReceipt = document.getElementById('btn-hide-receipt');
+
     let allProducts = [];
     let cart = {}; // { product_id: qty }
 
     document.getElementById('btn-load').addEventListener('click', loadProducts);
     document.getElementById('btn-clear').addEventListener('click', ()=>{ cart={}; renderCart(); renderProducts(); });
     document.getElementById('btn-create').addEventListener('click', createOrder);
+    btnHideReceipt.addEventListener('click', ()=>{ receipt.classList.remove('show'); btnHideReceipt.style.display='none'; });
     filterI.addEventListener('input', renderProducts);
 
     showCookies();
     loadProducts();
 
-    function showCookies(){
-      const raw = document.cookie || '';
-      const parsed = raw.split(';').reduce((acc,p)=>{
+    function parseCookies(){
+      return (document.cookie||'').split(';').reduce((acc,p)=>{
         const i=p.indexOf('='); if(i>0) acc[p.slice(0,i).trim()] = decodeURIComponent(p.slice(i+1)); return acc;
       }, {});
+    }
+    function getUserFromCookie(){
+      try{
+        const c = parseCookies();
+        if(!c.u) return null;
+        return JSON.parse(c.u);
+      }catch{ return null; }
+    }
+    function showCookies(){
+      const raw = document.cookie || '';
+      const parsed = parseCookies();
       cookiesPre.textContent = JSON.stringify({ raw, parsed }, null, 2);
     }
 
@@ -121,6 +184,7 @@
       const data = await apiRequest('orders','GET','/api/products');
       allProducts = data.products || [];
       renderProducts();
+      renderCart();
     }
 
     function renderProducts(){
@@ -132,13 +196,13 @@
 
       rows.innerHTML = rowsData.map(p => {
         const qty = cart[p.id] || 0;
-        const img = p.image_url ? `<img src="${esc(p.image_url)}" alt="">` : `<img src="data:image/svg+xml;utf8,${encodeURIComponent('<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2232%22 height=%2232%22><rect width=%2232%22 height=%22332%22 fill=%22%23121826%22/><text x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 fill=%22%239aa3b2%22 font-size=%2212%22>📦</text></svg>')}" alt="">`;
+        const img = p.image_url ? `<img src="${esc(p.image_url)}" alt="">` : `<img src="data:image/svg+xml;utf8,${placeholderIcon()}" alt="">`;
         return `
           <div class="row-item">
             ${img}
             <div class="name" title="${esc(p.name)}">${esc(p.name)}</div>
             <div class="desc" title="${esc(p.description||'')}">${esc(p.description||'')}</div>
-            <div class="price">${(Number(p.price_cents)/100).toFixed(2)}</div>
+            <div class="price">${fmtMoney(p.price_cents)}</div>
             <div class="qty">
               <button class="btn secondary" data-act="dec" data-id="${p.id}">-</button>
               <input data-id="${p.id}" value="${qty}" inputmode="numeric"/>
@@ -148,7 +212,6 @@
         `;
       }).join('');
 
-      // wire controls
       rows.querySelectorAll('button[data-act="inc"]').forEach(btn=>{
         btn.addEventListener('click', ()=>{
           const id = Number(btn.dataset.id);
@@ -175,35 +238,79 @@
       });
     }
 
-    function renderCart(){
+    function calcTotalsAndPayload(){
       const items = Object.entries(cart).map(([pid, qty])=>({ product_id: Number(pid), qty: Number(qty) }))
                                     .filter(x=>x.qty>0);
-      cartPre.textContent = JSON.stringify({ items }, null, 2);
 
-      // локальный total для UI
-      let sum = 0, count = 0;
+      let total_cents = 0, count = 0;
       for(const {product_id, qty} of items){
         const p = allProducts.find(x=>x.id===product_id);
         if(!p) continue;
-        sum += Number(p.price_cents||0) * qty;
+        total_cents += Number(p.price_cents||0) * qty;
         count += qty;
       }
-      badgeSum.textContent = 'total: ' + (sum/100).toFixed(2);
+
+      const user = getUserFromCookie(); // { email, name } | null
+      const payload = { user: user || null, items, total_cents, total_formatted: fmtMoney(total_cents, false) };
+
+      return { items, total_cents, count, payload };
+    }
+
+    function renderCart(){
+      const { total_cents, count, payload } = calcTotalsAndPayload();
+      cartPre.textContent = JSON.stringify(payload, null, 2);
+      badgeSum.textContent = 'total: ' + fmtMoney(total_cents, false);
       badgeCount.textContent = 'items: ' + count;
     }
 
     async function createOrder(){
-      const items = Object.entries(cart).map(([pid, qty])=>({ product_id: Number(pid), qty: Number(qty) }))
-                                    .filter(x=>x.qty>0);
+      const { items, payload } = calcTotalsAndPayload();
       if(items.length===0) return toast('Корзина пуста','err');
       try{
-        const res = await apiRequest('orders','POST','/api/orders', { items });
+        const res = await apiRequest('orders','POST','/api/orders', payload);
         toast('Заказ создан: #'+res.order.id, 'ok');
         cart = {};
         renderProducts(); renderCart();
+        showReceipt(res.order);
       }catch(err){
         toast(err.message || 'Ошибка создания заказа','err');
       }
+    }
+
+    function showReceipt(order){
+      // order: { id, user_id, total_cents, created_at, items_map }
+      const u = getUserFromCookie() || {};
+      rId.textContent = '№ ' + order.id;
+      rDate.textContent = new Date(order.created_at).toLocaleString();
+      rSum.textContent = 'Итого: ' + fmtMoney(order.total_cents, false);
+      rSumBottom.textContent = 'Итого: ' + fmtMoney(order.total_cents, false);
+      rName.textContent = u.name || '—';
+      rEmail.textContent = u.email || '—';
+
+      const entries = Object.entries(order.items_map || {}); // [ [productId, {qty, price_cents, line_total_cents, name}], ... ]
+      rItems.innerHTML = entries.map(([pid, it]) => `
+        <tr>
+          <td>${esc(pid)}</td>
+          <td>${esc(it.name || '')}</td>
+          <td class="right">${fmtMoney(it.price_cents)}</td>
+          <td class="right">${esc(it.qty)}</td>
+          <td class="right">${fmtMoney(it.line_total_cents)}</td>
+        </tr>
+      `).join('');
+
+      receipt.classList.add('show');
+      btnHideReceipt.style.display = 'inline-block';
+
+      // прокрутим к квитанции для акцента
+      setTimeout(()=> receipt.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+    }
+
+    function fmtMoney(cents, withSymbol=true){
+      const v = (Number(cents||0)/100).toFixed(2);
+      return withSymbol ? v+' ₽' : v;
+    }
+    function placeholderIcon(){
+      return encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32"><rect width="32" height="32" fill="#121826"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#9aa3b2" font-size="12">📦</text></svg>');
     }
 </script>
 </body>
