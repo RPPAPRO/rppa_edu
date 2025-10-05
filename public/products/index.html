@@ -14,6 +14,7 @@
         <a href="/">Home</a>
         <a href="/users/">Users</a>
         <a class="active" href="/products/">Products</a>
+        <a href="/orders/">Orders</a>
     </nav>
     <div class="spacer"></div>
     <button class="btn secondary" id="btn-logout">Logout</button>
@@ -139,124 +140,83 @@
 <div class="toasts" id="toasts"></div>
 <script src="/assets/app.js"></script>
 <script>
-    // общие
     bindLogout('#btn-logout');
-    initHashRouter('#nav', '/list', (route)=>{
-      if(route==='/list') loadProducts();
-    });
+    initHashRouter('#nav','/list',(route)=>{ if(route==='/list') loadProducts(); });
 
-    // Products logic
-    const pTableBody = document.querySelector('#p-table tbody');
-    const pFilter    = document.querySelector('#p-filter');
+    const pTableBody=document.querySelector('#p-table tbody');
+    const pFilter=document.querySelector('#p-filter');
+    document.getElementById('btn-plist-refresh').addEventListener('click',loadProducts);
+    pFilter.addEventListener('input',applyProductsFilter);
 
-    document.getElementById('btn-plist-refresh').addEventListener('click', loadProducts);
-    pFilter.addEventListener('input', applyProductsFilter);
-
-    let cachedProducts = [];
+    let cachedProducts=[];
     async function loadProducts(){
-      const data = await apiRequest('p-list','GET','/api/products');
-      cachedProducts = data.products || [];
-      renderProducts(cachedProducts);
+      const data=await apiRequest('p-list','GET','/api/products');
+      cachedProducts=data.products||[]; renderProducts(cachedProducts);
     }
-    function moneyCents(n){ return (Number(n)/100).toFixed(2); }
+    function moneyCents(n){return (Number(n)/100).toFixed(2);}
     function renderProducts(rows){
-      pTableBody.innerHTML = rows.map(r => `
-        <tr>
-          <td>${esc(r.id)}</td>
-          <td>${esc(r.name)}</td>
-          <td>${esc(r.description)}</td>
-          <td>${esc(moneyCents(r.price_cents))}</td>
-          <td>${r.image_url ? `<a href="${esc(r.image_url)}" target="_blank" rel="noopener">image</a>` : '—'}</td>
-        </tr>
+      pTableBody.innerHTML=rows.map(r=>`
+        <tr><td>${esc(r.id)}</td><td>${esc(r.name)}</td><td>${esc(r.description)}</td><td>${esc(moneyCents(r.price_cents))}</td><td>${r.image_url?`<a href="${esc(r.image_url)}" target="_blank" rel="noopener">image</a>`:'—'}</td></tr>
       `).join('');
     }
     function applyProductsFilter(){
-      const q = pFilter.value.trim().toLowerCase();
+      const q=pFilter.value.trim().toLowerCase();
       if(!q) return renderProducts(cachedProducts);
-      const out = cachedProducts.filter(p =>
-        String(p.name||'').toLowerCase().includes(q) ||
-        String(p.description||'').toLowerCase().includes(q)
-      );
-      renderProducts(out);
+      renderProducts(cachedProducts.filter(p=>String(p.name||'').toLowerCase().includes(q)||String(p.description||'').toLowerCase().includes(q)));
     }
 
     // GET
-    document.getElementById('btn-p-get-clear').addEventListener('click', ()=>{
-      document.getElementById('p-get-id').value=''; document.getElementById('p-get-output').textContent='—';
-      setStatus('p-get','–','–');
-    });
-    document.getElementById('form-p-get').addEventListener('submit', async (e)=>{
+    document.getElementById('btn-p-get-clear').addEventListener('click',()=>{document.getElementById('p-get-id').value='';document.getElementById('p-get-output').textContent='—';setStatus('p-get','–','–');});
+    document.getElementById('form-p-get').addEventListener('submit',async e=>{
       e.preventDefault();
-      const id = Number(document.getElementById('p-get-id').value);
+      const id=Number(document.getElementById('p-get-id').value);
       if(!Number.isInteger(id)) return toast('ID должен быть целым числом','err');
       try{
-        const data = await apiRequest('p-get','GET',`/api/products?id=${id}`);
-        document.getElementById('p-get-output').textContent = JSON.stringify(data, null, 2);
-      }catch(err){ document.getElementById('p-get-output').textContent = errText(err); }
+        const data=await apiRequest('p-get','GET',`/api/products?id=${id}`);
+        document.getElementById('p-get-output').textContent=JSON.stringify(data,null,2);
+      }catch(err){document.getElementById('p-get-output').textContent=errText(err);}
     });
 
     // CREATE
-    document.getElementById('btn-p-create-clear').addEventListener('click', ()=>{
-      ['p-create-name','p-create-description','p-create-price','p-create-image'].forEach(id=>document.getElementById(id).value='');
-      setStatus('p-create','–','–');
-    });
-    document.getElementById('form-p-create').addEventListener('submit', async (e)=>{
+    document.getElementById('btn-p-create-clear').addEventListener('click',()=>{['p-create-name','p-create-description','p-create-price','p-create-image'].forEach(id=>document.getElementById(id).value='');setStatus('p-create','–','–');});
+    document.getElementById('form-p-create').addEventListener('submit',async e=>{
       e.preventDefault();
-      const name = document.getElementById('p-create-name').value.trim();
-      const description = document.getElementById('p-create-description').value.trim();
-      const price_cents = Number(document.getElementById('p-create-price').value);
-      const image_url   = document.getElementById('p-create-image').value.trim();
-      if(!name || !description || !Number.isInteger(price_cents) || price_cents<0) return toast('Введите name, description и корректный price_cents','err');
-      await apiRequest('p-create','POST','/api/products',{ name, description, price_cents, image_url: image_url || undefined });
-      toast('Product created','ok');
-      if(location.hash==='#/list') loadProducts();
-      document.getElementById('btn-p-create-clear').click();
+      const name=document.getElementById('p-create-name').value.trim();
+      const description=document.getElementById('p-create-description').value.trim();
+      const price_cents=Number(document.getElementById('p-create-price').value);
+      const image_url=document.getElementById('p-create-image').value.trim();
+      if(!name||!description||!Number.isInteger(price_cents)||price_cents<0) return toast('Введите name, description и корректный price_cents','err');
+      await apiRequest('p-create','POST','/api/products',{name,description,price_cents,image_url:image_url||undefined});
+      toast('Product created','ok'); if(location.hash==='#/list') loadProducts(); document.getElementById('btn-p-create-clear').click();
     });
 
     // UPDATE
-    document.getElementById('btn-p-update-clear').addEventListener('click', ()=>{
-      ['p-update-id','p-update-name','p-update-description','p-update-price','p-update-image'].forEach(id=>document.getElementById(id).value='');
-      setStatus('p-update','–','–');
-    });
-    document.getElementById('form-p-update').addEventListener('submit', async (e)=>{
+    document.getElementById('btn-p-update-clear').addEventListener('click',()=>{['p-update-id','p-update-name','p-update-description','p-update-price','p-update-image'].forEach(id=>document.getElementById(id).value='');setStatus('p-update','–','–');});
+    document.getElementById('form-p-update').addEventListener('submit',async e=>{
       e.preventDefault();
-      const id = Number(document.getElementById('p-update-id').value);
-      const name = document.getElementById('p-update-name').value.trim();
-      const description = document.getElementById('p-update-description').value.trim();
-      const price_raw = document.getElementById('p-update-price').value.trim();
-      const image_url = document.getElementById('p-update-image').value.trim();
-
+      const id=Number(document.getElementById('p-update-id').value);
+      const name=document.getElementById('p-update-name').value.trim();
+      const description=document.getElementById('p-update-description').value.trim();
+      const price_raw=document.getElementById('p-update-price').value.trim();
+      const image_url=document.getElementById('p-update-image').value.trim();
       if(!Number.isInteger(id)) return toast('ID должен быть целым числом','err');
-
-      const body = { id };
-      if(name) body.name = name;
-      if(description) body.description = description;
-      if(price_raw){
-        const pc = Number(price_raw);
-        if(!Number.isInteger(pc) || pc<0) return toast('price_cents должен быть неотрицательным целым','err');
-        body.price_cents = pc;
-      }
-      if(image_url) body.image_url = image_url;
-
+      const body={id}; if(name) body.name=name; if(description) body.description=description;
+      if(price_raw){const pc=Number(price_raw); if(!Number.isInteger(pc)||pc<0) return toast('price_cents должен быть неотрицательным целым','err'); body.price_cents=pc;}
+      if(image_url) body.image_url=image_url;
       if(Object.keys(body).length===1) return toast('Нечего обновлять','err');
-
-      await apiRequest('p-update','PUT','/api/products', body);
-      toast('Product updated','ok');
-      if(location.hash==='#/list') loadProducts();
+      await apiRequest('p-update','PUT','/api/products',body);
+      toast('Product updated','ok'); if(location.hash==='#/list') loadProducts();
     });
 
     // DELETE
-    document.getElementById('btn-p-delete-clear').addEventListener('click', ()=>{
-      document.getElementById('p-delete-id').value=''; setStatus('p-delete','–','–');
-    });
-    document.getElementById('form-p-delete').addEventListener('submit', async (e)=>{
+    document.getElementById('btn-p-delete-clear').addEventListener('click',()=>{document.getElementById('p-delete-id').value='';setStatus('p-delete','–','–');});
+    document.getElementById('form-p-delete').addEventListener('submit',async e=>{
       e.preventDefault();
-      const id = Number(document.getElementById('p-delete-id').value);
+      const id=Number(document.getElementById('p-delete-id').value);
       if(!Number.isInteger(id)) return toast('ID должен быть целым числом','err');
       if(!confirm(`Удалить товар id=${id}?`)) return;
       await apiRequest('p-delete','DELETE',`/api/products?id=${id}`);
-      toast('Product deleted','ok');
-      if(location.hash==='#/list') loadProducts();
+      toast('Product deleted','ok'); if(location.hash==='#/list') loadProducts();
     });
 </script>
 </body>

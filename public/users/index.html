@@ -14,6 +14,7 @@
         <a href="/">Home</a>
         <a class="active" href="/users/">Users</a>
         <a href="/products/">Products</a>
+        <a href="/orders/">Orders</a>
     </nav>
     <div class="spacer"></div>
     <button class="btn secondary" id="btn-logout">Logout</button>
@@ -135,103 +136,75 @@
 <div class="toasts" id="toasts"></div>
 <script src="/assets/app.js"></script>
 <script>
-    // общие
     bindLogout('#btn-logout');
-    initHashRouter('#nav', '/list', (route)=>{
-      if(route==='/list') loadUsers();
-    });
+    initHashRouter('#nav','/list',(route)=>{ if(route==='/list') loadUsers(); });
 
-    // Users logic
-    const uTableBody = document.querySelector('#u-table tbody');
-    const uFilter    = document.querySelector('#u-filter');
+    const uTableBody=document.querySelector('#u-table tbody');
+    const uFilter=document.querySelector('#u-filter');
+    document.getElementById('btn-ulist-refresh').addEventListener('click',loadUsers);
+    uFilter.addEventListener('input',applyUsersFilter);
 
-    document.getElementById('btn-ulist-refresh').addEventListener('click', loadUsers);
-    uFilter.addEventListener('input', applyUsersFilter);
-
-    let cachedUsers = [];
+    let cachedUsers=[];
     async function loadUsers(){
-      const data = await apiRequest('u-list','GET','/api/users');
-      cachedUsers = data.users || [];
-      renderUsers(cachedUsers);
+      const data=await apiRequest('u-list','GET','/api/users');
+      cachedUsers=data.users||[]; renderUsers(cachedUsers);
     }
     function renderUsers(rows){
-      uTableBody.innerHTML = rows.map(r => `
-        <tr>
-          <td>${esc(r.id)}</td>
-          <td>${esc(r.name)}</td>
-          <td>${esc(r.email)}</td>
-          <td>${esc(r.created_at)}</td>
-        </tr>
+      uTableBody.innerHTML=rows.map(r=>`
+        <tr><td>${esc(r.id)}</td><td>${esc(r.name)}</td><td>${esc(r.email)}</td><td>${esc(r.created_at)}</td></tr>
       `).join('');
     }
     function applyUsersFilter(){
-      const q = uFilter.value.trim().toLowerCase();
+      const q=uFilter.value.trim().toLowerCase();
       if(!q) return renderUsers(cachedUsers);
-      const out = cachedUsers.filter(u =>
-        String(u.name||'').toLowerCase().includes(q) ||
-        String(u.email||'').toLowerCase().includes(q)
-      );
-      renderUsers(out);
+      renderUsers(cachedUsers.filter(u=>String(u.name||'').toLowerCase().includes(q)||String(u.email||'').toLowerCase().includes(q)));
     }
 
     // GET
-    document.getElementById('btn-u-get-clear').addEventListener('click', ()=>{
-      document.getElementById('u-get-id').value=''; document.getElementById('u-get-output').textContent='—';
-      setStatus('u-get','–','–');
-    });
-    document.getElementById('form-u-get').addEventListener('submit', async (e)=>{
+    document.getElementById('btn-u-get-clear').addEventListener('click',()=>{document.getElementById('u-get-id').value='';document.getElementById('u-get-output').textContent='—';setStatus('u-get','–','–');});
+    document.getElementById('form-u-get').addEventListener('submit',async e=>{
       e.preventDefault();
-      const id = Number(document.getElementById('u-get-id').value);
+      const id=Number(document.getElementById('u-get-id').value);
       if(!Number.isInteger(id)) return toast('ID должен быть целым числом','err');
       try{
-        const data = await apiRequest('u-get','GET',`/api/users?id=${id}`);
-        document.getElementById('u-get-output').textContent = JSON.stringify(data, null, 2);
-      }catch(err){ document.getElementById('u-get-output').textContent = errText(err); }
+        const data=await apiRequest('u-get','GET',`/api/users?id=${id}`);
+        document.getElementById('u-get-output').textContent=JSON.stringify(data,null,2);
+      }catch(err){document.getElementById('u-get-output').textContent=errText(err);}
     });
 
     // CREATE
-    document.getElementById('btn-u-create-clear').addEventListener('click', ()=>{
-      document.getElementById('u-create-name').value=''; document.getElementById('u-create-email').value=''; setStatus('u-create','–','–');
-    });
-    document.getElementById('form-u-create').addEventListener('submit', async (e)=>{
+    document.getElementById('btn-u-create-clear').addEventListener('click',()=>{document.getElementById('u-create-name').value='';document.getElementById('u-create-email').value='';setStatus('u-create','–','–');});
+    document.getElementById('form-u-create').addEventListener('submit',async e=>{
       e.preventDefault();
-      const name = document.getElementById('u-create-name').value.trim();
-      const email= document.getElementById('u-create-email').value.trim();
-      if(!name || !email) return toast('Заполните name и email','err');
-      await apiRequest('u-create','POST','/api/users',{ name, email });
-      toast('User created','ok');
-      if(location.hash==='#/list') loadUsers();
-      document.getElementById('btn-u-create-clear').click();
+      const name=document.getElementById('u-create-name').value.trim();
+      const email=document.getElementById('u-create-email').value.trim();
+      if(!name||!email) return toast('Заполните name и email','err');
+      await apiRequest('u-create','POST','/api/users',{name,email});
+      toast('User created','ok'); if(location.hash==='#/list') loadUsers(); document.getElementById('btn-u-create-clear').click();
     });
 
     // UPDATE
-    document.getElementById('btn-u-update-clear').addEventListener('click', ()=>{
-      ['u-update-id','u-update-name','u-update-email'].forEach(id=>document.getElementById(id).value=''); setStatus('u-update','–','–');
-    });
-    document.getElementById('form-u-update').addEventListener('submit', async (e)=>{
+    document.getElementById('btn-u-update-clear').addEventListener('click',()=>{['u-update-id','u-update-name','u-update-email'].forEach(id=>document.getElementById(id).value='');setStatus('u-update','–','–');});
+    document.getElementById('form-u-update').addEventListener('submit',async e=>{
       e.preventDefault();
-      const id = Number(document.getElementById('u-update-id').value);
-      const name = document.getElementById('u-update-name').value.trim();
-      const email= document.getElementById('u-update-email').value.trim();
+      const id=Number(document.getElementById('u-update-id').value);
+      const name=document.getElementById('u-update-name').value.trim();
+      const email=document.getElementById('u-update-email').value.trim();
       if(!Number.isInteger(id)) return toast('ID должен быть целым числом','err');
-      if(!name && !email) return toast('Укажите новое name/email','err');
-      await apiRequest('u-update','PUT','/api/users',{ id, name: name||undefined, email: email||undefined });
-      toast('User updated','ok');
-      if(location.hash==='#/list') loadUsers();
+      if(!name&&!email) return toast('Укажите новое name/email','err');
+      await apiRequest('u-update','PUT','/api/users',{id,name:name||undefined,email:email||undefined});
+      toast('User updated','ok'); if(location.hash==='#/list') loadUsers();
     });
 
     // DELETE
-    document.getElementById('btn-u-delete-clear').addEventListener('click', ()=>{
-      document.getElementById('u-delete-id').value=''; setStatus('u-delete','–','–');
-    });
-    document.getElementById('form-u-delete').addEventListener('submit', async (e)=>{
+    document.getElementById('btn-u-delete-clear').addEventListener('click',()=>{document.getElementById('u-delete-id').value='';setStatus('u-delete','–','–');});
+    document.getElementById('form-u-delete').addEventListener('submit',async e=>{
       e.preventDefault();
-      const id = Number(document.getElementById('u-delete-id').value);
+      const id=Number(document.getElementById('u-delete-id').value);
       if(!Number.isInteger(id)) return toast('ID должен быть целым числом','err');
       if(!confirm(`Удалить пользователя id=${id}?`)) return;
       await apiRequest('u-delete','DELETE',`/api/users?id=${id}`);
-      toast('User deleted','ok');
-      if(location.hash==='#/list') loadUsers();
+      toast('User deleted','ok'); if(location.hash==='#/list') loadUsers();
     });
 </script>
 </body>

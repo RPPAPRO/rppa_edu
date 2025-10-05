@@ -6,16 +6,28 @@
     <title>edu_rppa · Orders</title>
     <link rel="stylesheet" href="/assets/app.css"/>
     <style>
-        .cards{display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:14px}
-        .p-card{background:var(--panel); border:1px solid rgba(255,255,255,.08); border-radius:14px; padding:12px}
-        .p-name{font-weight:700; margin:0 0 6px}
-        .p-desc{color:var(--muted); font-size:12px; min-height:32px}
-        .p-price{margin-top:6px}
-        .qty{display:flex; align-items:center; gap:8px; margin-top:10px}
-        .qty input{width:70px; text-align:center}
-        .totals{display:flex; gap:12px; align-items:center; flex-wrap:wrap}
-        .flex{display:flex; gap:12px; align-items:center; flex-wrap:wrap}
-        .grow{flex:1}
+        /* Плоские строки товаров */
+        .rows{display:grid;grid-template-columns:1fr;gap:8px}
+        .row-item{
+          display:grid;
+          grid-template-columns: 36px 1.2fr 2fr 0.7fr auto;
+          gap:10px; align-items:center;
+          padding:10px 12px; border:1px solid rgba(255,255,255,.08); border-radius:10px;
+          background:#0e1420; /* плоско, без тени */
+        }
+        .row-item img{width:32px;height:32px;object-fit:cover;border-radius:6px;border:1px solid rgba(255,255,255,.08)}
+        .row-item .name{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        .row-item .desc{color:var(--muted);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        .qty{display:flex;align-items:center;gap:6px;justify-self:end}
+        .qty input{width:70px;text-align:center}
+        .totals{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+        @media(max-width:900px){
+          .row-item{grid-template-columns:32px 1fr;grid-auto-rows:auto}
+          .row-item .name{grid-column:2}
+          .row-item .desc{grid-column:2}
+          .row-item .price{grid-column:2}
+          .row-item .qty{grid-column:2;justify-self:start}
+        }
     </style>
 </head>
 <body>
@@ -34,8 +46,8 @@
 
 <main class="content">
     <section class="card">
-        <h2>Выбор товаров</h2>
-        <div class="desc">Накликайте нужные количества; ниже обновляется JSON корзины и cookies.</div>
+        <h2>Оформление заказа</h2>
+        <div class="desc">Выберите количество; ниже — JSON корзины и cookies.</div>
 
         <div class="actions">
             <button class="btn" id="btn-load">Обновить список товаров</button>
@@ -44,19 +56,19 @@
             <div class="totals">
                 <span class="badge" id="badge-count">items: 0</span>
                 <span class="badge" id="badge-sum">total: 0.00</span>
-                <button class="btn" id="btn-clear">Очистить корзину</button>
+                <button class="btn secondary" id="btn-clear">Очистить</button>
             </div>
         </div>
 
-        <div class="cards mt12" id="cards"></div>
+        <div class="rows mt12" id="rows"></div>
 
-        <div class="flex mt12">
-            <div class="grow">
-                <h3 style="margin:6px 0">Cart JSON (payload → POST /api/orders)</h3>
+        <div class="mt12" style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div>
+                <h3 style="margin:6px 0">Cart JSON</h3>
                 <pre id="cart-json">—</pre>
             </div>
-            <div class="grow">
-                <h3 style="margin:6px 0">Cookies (raw & parsed)</h3>
+            <div>
+                <h3 style="margin:6px 0">Cookies</h3>
                 <pre id="cookies-json">—</pre>
             </div>
         </div>
@@ -79,7 +91,7 @@
 <script>
     bindLogout('#btn-logout');
 
-    const cards   = document.getElementById('cards');
+    const rows   = document.getElementById('rows');
     const filterI = document.getElementById('p-filter');
     const badgeCount = document.getElementById('badge-count');
     const badgeSum   = document.getElementById('badge-sum');
@@ -113,37 +125,38 @@
 
     function renderProducts(){
       const q = (filterI.value||'').trim().toLowerCase();
-      const rows = q ? allProducts.filter(p =>
+      const rowsData = q ? allProducts.filter(p =>
         String(p.name||'').toLowerCase().includes(q) ||
         String(p.description||'').toLowerCase().includes(q)
       ) : allProducts;
 
-      cards.innerHTML = rows.map(p => {
+      rows.innerHTML = rowsData.map(p => {
         const qty = cart[p.id] || 0;
+        const img = p.image_url ? `<img src="${esc(p.image_url)}" alt="">` : `<img src="data:image/svg+xml;utf8,${encodeURIComponent('<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2232%22 height=%2232%22><rect width=%2232%22 height=%22332%22 fill=%22%23121826%22/><text x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 fill=%22%239aa3b2%22 font-size=%2212%22>📦</text></svg>')}" alt="">`;
         return `
-          <div class="p-card">
-            <div class="p-name">${esc(p.name)}</div>
-            <div class="p-desc">${esc(p.description || '')}</div>
-            <div class="p-price">Price: ${(Number(p.price_cents)/100).toFixed(2)}</div>
+          <div class="row-item">
+            ${img}
+            <div class="name" title="${esc(p.name)}">${esc(p.name)}</div>
+            <div class="desc" title="${esc(p.description||'')}">${esc(p.description||'')}</div>
+            <div class="price">${(Number(p.price_cents)/100).toFixed(2)}</div>
             <div class="qty">
               <button class="btn secondary" data-act="dec" data-id="${p.id}">-</button>
               <input data-id="${p.id}" value="${qty}" inputmode="numeric"/>
               <button class="btn secondary" data-act="inc" data-id="${p.id}">+</button>
-              <a class="btn secondary" href="${esc(p.image_url||'#')}" target="_blank" rel="noopener">image</a>
             </div>
           </div>
         `;
       }).join('');
 
       // wire controls
-      cards.querySelectorAll('button[data-act="inc"]').forEach(btn=>{
+      rows.querySelectorAll('button[data-act="inc"]').forEach(btn=>{
         btn.addEventListener('click', ()=>{
           const id = Number(btn.dataset.id);
           cart[id] = (cart[id]||0) + 1;
           renderProducts(); renderCart();
         });
       });
-      cards.querySelectorAll('button[data-act="dec"]').forEach(btn=>{
+      rows.querySelectorAll('button[data-act="dec"]').forEach(btn=>{
         btn.addEventListener('click', ()=>{
           const id = Number(btn.dataset.id);
           cart[id] = Math.max(0, (cart[id]||0) - 1);
@@ -151,7 +164,7 @@
           renderProducts(); renderCart();
         });
       });
-      cards.querySelectorAll('input[data-id]').forEach(inp=>{
+      rows.querySelectorAll('input[data-id]').forEach(inp=>{
         inp.addEventListener('change', ()=>{
           const id = Number(inp.dataset.id);
           let v = Number(inp.value);
@@ -167,7 +180,7 @@
                                     .filter(x=>x.qty>0);
       cartPre.textContent = JSON.stringify({ items }, null, 2);
 
-      // посчитаем локально total (для UI), берём текущие цены
+      // локальный total для UI
       let sum = 0, count = 0;
       for(const {product_id, qty} of items){
         const p = allProducts.find(x=>x.id===product_id);
