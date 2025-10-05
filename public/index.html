@@ -101,6 +101,23 @@
             </div>
         </div>
     </section>
+    <section class="card mt24">
+        <h2>Архитектура приложения</h2>
+        <p>
+            Ниже показана упрощённая схема работы edu_rppa.
+            Она помогает понять, как данные проходят от пользователя до базы данных и обратно.
+        </p>
+        <img src="/assets/architecture.png" alt="Architecture diagram of edu_rppa" style="width:100%;border-radius:12px;margin:16px 0;box-shadow:0 0 16px rgba(0,0,0,0.2)">
+        <div class="desc">
+            <ol style="margin-left:20px">
+                <li><b>Browser (Frontend)</b> — интерфейс пользователя на HTML, CSS и JavaScript.</li>
+                <li><b>Cloudflare Pages</b> — размещает статические файлы сайта.</li>
+                <li><b>Cloudflare Functions</b> — серверная логика, API-эндпоинты.</li>
+                <li><b>D1 Database</b> — база данных, где хранятся пользователи, товары и заказы.</li>
+            </ol>
+        </div>
+    </section>
+
 </main>
 
 <div class="loader" id="loader"></div>
