@@ -5,7 +5,12 @@ export async function onRequest(ctx) {
     const url = new URL(request.url);
     const path = url.pathname;
 
-    // Открытые маршруты (старт/логин/статик/авторизация)
+    // 1) Пропускаем preflight
+    if (request.method === 'OPTIONS') {
+      return new Response(null, { status: 204 });
+    }
+
+    // 2) Явно разрешённые пути: главная, логин, статика, авторизация
     const openExact = new Set([
       '/', '/index.html',
       '/login.html',
@@ -18,28 +23,24 @@ export async function onRequest(ctx) {
       '/_workers/', '/.well-known/',
     ];
 
-    // Пропускаем OPTIONS без проверки сессии (preflight)
-    if (request.method === 'OPTIONS') {
-      return new Response(null, { status: 204 });
-    }
-
     const isOpen =
       openExact.has(path) ||
       openPrefix.some(p => path.startsWith(p));
 
-    if (isOpen) {
-      // Важно: именно await
+    // 3) Никогда не редиректим сам /login.html (во избежание петли)
+    const isLogin = path === '/login.html';
+
+    if (isOpen || isLogin) {
       return await ctx.next();
     }
 
-    // --- проверка сессии ---
+    // 4) Проверяем сессию для всего остального (страницы и /api/*)
     const cookies = parseCookie(request.headers.get('cookie') || '');
     const sid = cookies['sid'];
     if (!sid) return redirectToLogin(url);
 
-    // D1 может быть не привязан — не роняем воркер
     if (!env.edu_rppa_db) {
-      console.log({ middleware_error: 'D1 binding is undefined' });
+      // Без привязки D1 не валимся, но считаем что нет сессии
       return redirectToLogin(url);
     }
 
@@ -52,19 +53,22 @@ export async function onRequest(ctx) {
       return redirectToLogin(url);
     }
 
-    // Авторизовано → пропускаем к статике/функциям
+    // 5) Авторизовано — пропускаем дальше
     return await ctx.next();
   } catch (e) {
-    // Никогда не оставляем без ответа — лог и 500
     console.log({ middleware_unhandled: String(e) });
     return new Response('Internal error (middleware)', { status: 500 });
   }
 }
 
-function redirectToLogin(url) {
-  const login = new URL('/login.html', url.origin);
-  login.searchParams.set('next', url.pathname + url.search);
-  return Response.redirect(login, 302);
+function redirectToLogin(currentUrl) {
+  const loginUrl = new URL('/login.html', currentUrl.origin);
+  // Если уже на /login.html — не редиректим (страхуемся от любых побочных эффектов)
+  if (currentUrl.pathname === '/login.html') {
+    return new Response(null, { status: 204 });
+  }
+  loginUrl.searchParams.set('next', currentUrl.pathname + currentUrl.search);
+  return Response.redirect(loginUrl, 302);
 }
 
 function parseCookie(str) {
