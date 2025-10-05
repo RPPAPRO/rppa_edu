@@ -6,9 +6,22 @@
     <title>edu_rppa · Главная</title>
     <link rel="stylesheet" href="/assets/app.css"/>
     <style>
-        .grid3{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;margin-top:16px}
-        .navbtn{display:flex;flex-direction:column;gap:6px;align-items:flex-start;text-decoration:none}
-        .navbtn .hint{opacity:.8}
+        /* Компоновка: слева кнопки, справа описание (на мобилке — один столбец) */
+        .hero {display:grid; grid-template-columns: 1fr 1fr; gap:16px;}
+        .hero .panel {background:var(--panel); border:1px solid rgba(255,255,255,.08); border-radius:14px; padding:16px;}
+        .grid3{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
+        /* Контрастные «кнопки-тайлы» */
+        .navbtn{
+          display:flex; flex-direction:column; gap:6px; text-decoration:none;
+          background:#0e1420; border:1px solid rgba(255,255,255,.14); border-radius:12px;
+          padding:14px; transition:.16s transform,.16s box-shadow,.16s border-color;
+          color:#e6e9ef; /* контрастный текст */
+        }
+        .navbtn:hover{ transform:translateY(-1px); box-shadow:0 10px 24px rgba(0,0,0,.35); border-color:rgba(124,77,255,.45); }
+        .navbtn .title{font-weight:700}
+        .navbtn .hint{color:var(--muted)}
+        .desc p{margin:0 0 8px}
+        @media (max-width: 980px){ .hero {grid-template-columns: 1fr;} }
     </style>
 </head>
 <body>
@@ -25,23 +38,42 @@
 </header>
 
 <main class="content">
-    <section class="card">
-        <h2>Демо-платформа edu_rppa</h2>
-        <p class="desc">Показывает связку <b>Frontend ↔ API ↔ Database</b> на Cloudflare.</p>
+    <section class="hero">
+        <!-- Левая панель: кнопки -->
+        <div class="panel">
+            <h2>Разделы</h2>
+            <div class="grid3">
+                <a class="navbtn" href="/users/">
+                    <span class="title">👤 Users</span>
+                    <span class="hint">CRUD пользователей</span>
+                </a>
+                <a class="navbtn" href="/products/">
+                    <span class="title">📦 Products</span>
+                    <span class="hint">CRUD товаров</span>
+                </a>
+                <a class="navbtn" href="/orders/">
+                    <span class="title">🛒 Orders</span>
+                    <span class="hint">Корзина и создание заказа</span>
+                </a>
+            </div>
+        </div>
 
-        <div class="grid3">
-            <a class="btn navbtn" href="/users/">
-                <span>👤 Users</span>
-                <span class="hint">CRUD пользователей</span>
-            </a>
-            <a class="btn navbtn" href="/products/">
-                <span>📦 Products</span>
-                <span class="hint">CRUD товаров</span>
-            </a>
-            <a class="btn navbtn" href="/orders/">
-                <span>🛒 Orders</span>
-                <span class="hint">Корзина и создание заказа</span>
-            </a>
+        <!-- Правая панель: описание проекта -->
+        <div class="panel">
+            <h2>О проекте edu_rppa</h2>
+            <div class="desc">
+                <p><b>edu_rppa</b> — демонстрационное приложение для мастер-класса по архитектуре информационных систем.</p>
+                <p>Показывает связку <b>Frontend ↔ API ↔ Database</b> на базе Cloudflare Pages Functions и D1.</p>
+                <p>Каждый раздел демонстрирует свой аспект:
+                    <br>• <b>Users</b> — управление пользователями (CRUD, фильтрация).
+                    <br>• <b>Products</b> — каталог товаров с ценами и ссылками на изображения.
+                    <br>• <b>Orders</b> — клиентская корзина, формирование JSON-пейлоада и сохранение заказа в D1.
+                </p>
+                <p>Авторизация — через одноразовый e-mail-код. После входа создаются cookies:
+                    <br>• <code>sid</code> — идентификатор сессии (HttpOnly).
+                    <br>• <code>u</code> — JSON с именем и e-mail для UI.
+                </p>
+            </div>
         </div>
     </section>
 </main>
@@ -49,6 +81,8 @@
 <div class="loader" id="loader"></div>
 <div class="toasts" id="toasts"></div>
 <script src="/assets/app.js"></script>
-<script>bindLogout('#btn-logout');</script>
+<script>
+    bindLogout('#btn-logout');
+</script>
 </body>
 </html>

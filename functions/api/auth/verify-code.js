@@ -32,16 +32,14 @@ export async function onRequest(ctx) {
     "INSERT INTO sessions(session_id, email, expires_at, created_at) VALUES(?,?,?,?)"
   ).bind(sid, email, exp, now).run();
 
-  // cookies:
-  // - sid: httpOnly (для защиты)
-  // - u:   НЕ httpOnly с JSON {email,name} (для фронта)
-  const headers = new Headers({
-    'content-type': 'application/json',
-    'set-cookie': [
-      cookie('sid', sid, { httpOnly: true, secure: true, sameSite: 'Lax', path: '/', maxAge: 7*24*60*60 }),
-      cookie('u', encodeURIComponent(JSON.stringify({ email, name })), { httpOnly: false, secure: true, sameSite: 'Lax', path: '/', maxAge: 7*24*60*60 })
-    ].join(', ')
-  });
+  // 🧠 ВАЖНО: несколько Set-Cookie — ТОЛЬКО через headers.append, не объединять!
+  const headers = new Headers({ 'content-type': 'application/json' });
+  headers.append('Set-Cookie', cookie('sid', sid, {
+    httpOnly: true, secure: true, sameSite: 'Lax', path: '/', maxAge: 7*24*60*60
+  }));
+  headers.append('Set-Cookie', cookie('u', encodeURIComponent(JSON.stringify({ email, name })), {
+    httpOnly: false, secure: true, sameSite: 'Lax', path: '/', maxAge: 7*24*60*60
+  }));
 
   return new Response(JSON.stringify({ ok: true }), { status: 200, headers });
 }

@@ -11,14 +11,11 @@ export async function onRequest(ctx) {
     catch {}
   }
 
-  // удаляем обе cookie
-  const headers = new Headers({
-    'content-type':'application/json',
-    'set-cookie': [
-      'sid=deleted; Path=/; Max-Age=0; HttpOnly; SameSite=Lax',
-      'u=deleted; Path=/; Max-Age=0; SameSite=Lax'
-    ].join(', ')
-  });
+  // Чистим обе cookies отдельными заголовками
+  const headers = new Headers({ 'content-type':'application/json' });
+  headers.append('Set-Cookie', 'sid=deleted; Path=/; Max-Age=0; HttpOnly; SameSite=Lax');
+  headers.append('Set-Cookie', 'u=deleted; Path=/; Max-Age=0; SameSite=Lax');
+
   return new Response(JSON.stringify({ ok: true }), { status: 200, headers });
 }
 
