@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>edu_rppa · Users CRUD</title>
+    <title>edu_rppa · Users & Products CRUD</title>
     <style>
         :root{
           --bg:#0b0f17;
@@ -43,12 +43,15 @@
         .subtitle{color:var(--muted)}
 
         /* Layout */
-        .wrap{display:grid; grid-template-columns:240px 1fr; min-height:calc(100vh - 56px);}
+        .wrap{display:grid; grid-template-columns:260px 1fr; min-height:calc(100vh - 56px);}
         .sidebar{
           border-right:1px solid rgba(255,255,255,.06);
           background:linear-gradient(180deg, rgba(255,255,255,.03), transparent 30%);
           padding:16px;
         }
+
+        /* Nav */
+        .group-title{margin:12px 8px 6px; color:#c8d0df; font-weight:700; font-size:12px; text-transform:uppercase; opacity:.75}
         .nav{display:flex; flex-direction:column; gap:8px;}
         .nav a{
           text-decoration:none; color:var(--text);
@@ -74,8 +77,8 @@
         .desc{color:var(--muted); margin-top:-6px; margin-bottom:10px}
 
         /* Forms */
-        .form{display:grid; gap:12px; max-width:720px}
-        .row{display:grid; grid-template-columns:180px 1fr; gap:12px; align-items:center}
+        .form{display:grid; gap:12px; max-width:780px}
+        .row{display:grid; grid-template-columns:200px 1fr; gap:12px; align-items:center}
         label{color:#c9d2e1}
         input,select,button,textarea{
           font:14px/1.3 inherit; color:var(--text)
@@ -85,6 +88,7 @@
           outline:none; transition:.15s box-shadow,.15s border-color;
         }
         input:focus,textarea:focus,select:focus{box-shadow:var(--focus); border-color:transparent}
+        textarea{min-height:96px; resize:vertical}
         .hint{color:var(--muted); font-size:12px; margin-top:-6px}
         .actions{display:flex; gap:10px; flex-wrap:wrap}
         .btn{
@@ -101,7 +105,7 @@
 
         /* Table */
         .table-wrap{overflow:auto; border:1px solid rgba(255,255,255,.06); border-radius:12px}
-        table{width:100%; border-collapse:collapse; min-width:640px; background:#0e1420}
+        table{width:100%; border-collapse:collapse; min-width:680px; background:#0e1420}
         th,td{padding:10px 12px; border-bottom:1px solid rgba(255,255,255,.06)}
         th{text-align:left; color:#c8d0df; background:#0f1726; position:sticky; top:0}
         tr:hover td{background:rgba(124,77,255,.05)}
@@ -129,13 +133,13 @@
         .toasts{position:fixed; right:16px; top:70px; display:grid; gap:10px; z-index:40}
         .toast{
           background:var(--panel); border:1px solid rgba(255,255,255,.10); padding:12px 14px; border-radius:12px;
-          box-shadow:0 10px 30px rgba(0,0,0,.32); min-width:220px; max-width:360px;
+          box-shadow:0 10px 30px rgba(0,0,0,.32); min-width:220px; max-width:380px;
         }
         .toast.ok{border-color:rgba(31,214,168,.45)}
         .toast.err{border-color:rgba(255,107,107,.45)}
 
         /* Mobile */
-        @media (max-width: 860px){
+        @media (max-width: 920px){
           .wrap{grid-template-columns:1fr}
           .sidebar{position:sticky; top:56px; z-index:15}
           .row{grid-template-columns:1fr}
@@ -144,10 +148,10 @@
 </head>
 <body>
 <div class="topbar">
-    <div class="logo">edu_rppa · Users CRUD</div>
-    <div class="subtitle">Cloudflare Pages + Functions + D1</div>
+    <div class="logo">edu_rppa · CRUD demo</div>
+    <div class="subtitle">Users & Products · Cloudflare Pages + Functions + D1</div>
     <div class="spacer"></div>
-    <a class="badge" href="#/list" title="Показать список">#/list</a>
+    <a class="badge" href="#/users/list" title="Показать список пользователей">#/users/list</a>
 </div>
 
 <div class="loader" id="loader"></div>
@@ -155,136 +159,274 @@
 
 <div class="wrap">
     <aside class="sidebar">
-        <nav class="nav" id="nav">
-            <a href="#/list"   data-route="/list">List (GET)</a>
-            <a href="#/get"    data-route="/get">Get by ID (GET)</a>
-            <a href="#/create" data-route="/create">Create (POST)</a>
-            <a href="#/update" data-route="/update">Update (PUT)</a>
-            <a href="#/delete" data-route="/delete">Delete (DELETE)</a>
+        <div class="group-title">Users</div>
+        <nav class="nav" id="nav-users">
+            <a href="#/users/list"   data-route="/users/list">List (GET)</a>
+            <a href="#/users/get"    data-route="/users/get">Get by ID (GET)</a>
+            <a href="#/users/create" data-route="/users/create">Create (POST)</a>
+            <a href="#/users/update" data-route="/users/update">Update (PUT)</a>
+            <a href="#/users/delete" data-route="/users/delete">Delete (DELETE)</a>
+        </nav>
+
+        <div class="group-title" style="margin-top:14px">Products</div>
+        <nav class="nav" id="nav-products">
+            <a href="#/products/list"   data-route="/products/list">List (GET)</a>
+            <a href="#/products/get"    data-route="/products/get">Get by ID (GET)</a>
+            <a href="#/products/create" data-route="/products/create">Create (POST)</a>
+            <a href="#/products/update" data-route="/products/update">Update (PUT)</a>
+            <a href="#/products/delete" data-route="/products/delete">Delete (DELETE)</a>
         </nav>
     </aside>
 
     <main class="content">
-        <!-- LIST -->
-        <section class="card route" data-route="/list">
-            <h2>List users</h2>
+        <!-- USERS: LIST -->
+        <section class="card route" data-route="/users/list">
+            <h2>Users · List</h2>
             <div class="desc">GET <code>/api/users</code>. Локальная фильтрация по имени/email.</div>
             <div class="actions">
-                <button class="btn" id="btn-list-refresh">Refresh</button>
-                <input id="list-filter" placeholder="Фильтр по имени/email…" />
+                <button class="btn" id="btn-ulist-refresh">Refresh</button>
+                <input id="u-filter" placeholder="Фильтр по name/email…" />
             </div>
             <div class="table-wrap" style="margin-top:12px">
-                <table id="users-table">
+                <table id="u-table">
                     <thead><tr><th>ID</th><th>Name</th><th>Email</th><th>Created At</th></tr></thead>
                     <tbody></tbody>
                 </table>
             </div>
             <div class="statusbar" style="margin-top:10px">
-                <div class="badge" id="list-status">status: –</div>
-                <div class="badge" id="list-time">time: – ms</div>
+                <div class="badge" id="u-list-status">status: –</div>
+                <div class="badge" id="u-list-time">time: – ms</div>
                 <div class="spacer"></div>
             </div>
         </section>
 
-        <!-- GET BY ID -->
-        <section class="card route" data-route="/get" hidden>
-            <h2>Get user by ID</h2>
+        <!-- USERS: GET -->
+        <section class="card route" data-route="/users/get" hidden>
+            <h2>Users · Get by ID</h2>
             <div class="desc">GET <code>/api/users?id=…</code></div>
-            <form class="form" id="form-get">
+            <form class="form" id="form-u-get">
                 <div class="row">
-                    <label for="get-id">ID (integer)</label>
-                    <input id="get-id" type="number" placeholder="Напр. 1759617494321" required />
+                    <label for="u-get-id">ID (integer)</label>
+                    <input id="u-get-id" type="number" placeholder="Напр. 1759…" required />
                 </div>
                 <div class="actions">
-                    <button class="btn" type="submit" id="btn-get">Fetch</button>
-                    <button class="btn secondary" type="button" id="btn-get-clear">Clear</button>
+                    <button class="btn" type="submit" id="btn-u-get">Fetch</button>
+                    <button class="btn secondary" type="button" id="btn-u-get-clear">Clear</button>
                 </div>
-                <div class="hint">Покажет одного пользователя или <code>null</code>.</div>
             </form>
-            <div style="margin-top:10px">
-                <pre id="get-output">—</pre>
-            </div>
+            <div style="margin-top:10px"><pre id="u-get-output">—</pre></div>
             <div class="statusbar" style="margin-top:10px">
-                <div class="badge" id="get-status">status: –</div>
-                <div class="badge" id="get-time">time: – ms</div>
+                <div class="badge" id="u-get-status">status: –</div>
+                <div class="badge" id="u-get-time">time: – ms</div>
                 <div class="spacer"></div>
             </div>
         </section>
 
-        <!-- CREATE -->
-        <section class="card route" data-route="/create" hidden>
-            <h2>Create user</h2>
+        <!-- USERS: CREATE -->
+        <section class="card route" data-route="/users/create" hidden>
+            <h2>Users · Create</h2>
             <div class="desc">POST <code>/api/users</code></div>
-            <form class="form" id="form-create">
+            <form class="form" id="form-u-create">
                 <div class="row">
-                    <label for="create-name">Name</label>
-                    <input id="create-name" placeholder="Alice" required />
+                    <label for="u-create-name">Name</label>
+                    <input id="u-create-name" placeholder="Alice" required />
                 </div>
                 <div class="row">
-                    <label for="create-email">Email</label>
-                    <input id="create-email" type="email" placeholder="alice@example.com" required />
+                    <label for="u-create-email">Email</label>
+                    <input id="u-create-email" type="email" placeholder="alice@example.com" required />
                 </div>
                 <div class="actions">
-                    <button class="btn" type="submit" id="btn-create">Create</button>
-                    <button class="btn secondary" type="button" id="btn-create-clear">Clear</button>
+                    <button class="btn" type="submit" id="btn-u-create">Create</button>
+                    <button class="btn secondary" type="button" id="btn-u-create-clear">Clear</button>
                 </div>
-                <div class="hint">При успехе вернётся <code>{ ok: true, id }</code>.</div>
             </form>
             <div class="statusbar" style="margin-top:10px">
-                <div class="badge" id="create-status">status: –</div>
-                <div class="badge" id="create-time">time: – ms</div>
+                <div class="badge" id="u-create-status">status: –</div>
+                <div class="badge" id="u-create-time">time: – ms</div>
                 <div class="spacer"></div>
             </div>
         </section>
 
-        <!-- UPDATE -->
-        <section class="card route" data-route="/update" hidden>
-            <h2>Update user</h2>
+        <!-- USERS: UPDATE -->
+        <section class="card route" data-route="/users/update" hidden>
+            <h2>Users · Update</h2>
             <div class="desc">PUT <code>/api/users</code></div>
-            <form class="form" id="form-update">
+            <form class="form" id="form-u-update">
                 <div class="row">
-                    <label for="update-id">ID (required)</label>
-                    <input id="update-id" type="number" placeholder="id пользователя" required />
+                    <label for="u-update-id">ID (required)</label>
+                    <input id="u-update-id" type="number" placeholder="id пользователя" required />
                 </div>
                 <div class="row">
-                    <label for="update-name">Name (optional)</label>
-                    <input id="update-name" placeholder="Новое имя (опционально)" />
+                    <label for="u-update-name">Name (optional)</label>
+                    <input id="u-update-name" placeholder="Новое имя (опционально)" />
                 </div>
                 <div class="row">
-                    <label for="update-email">Email (optional)</label>
-                    <input id="update-email" type="email" placeholder="Новый email (опционально)" />
+                    <label for="u-update-email">Email (optional)</label>
+                    <input id="u-update-email" type="email" placeholder="Новый email (опционально)" />
                 </div>
                 <div class="actions">
-                    <button class="btn" type="submit" id="btn-update">Update</button>
-                    <button class="btn secondary" type="button" id="btn-update-clear">Clear</button>
+                    <button class="btn" type="submit" id="btn-u-update">Update</button>
+                    <button class="btn secondary" type="button" id="btn-u-update-clear">Clear</button>
                 </div>
-                <div class="hint">Можно менять одно поле или оба. На email действует UNIQUE.</div>
             </form>
             <div class="statusbar" style="margin-top:10px">
-                <div class="badge" id="update-status">status: –</div>
-                <div class="badge" id="update-time">time: – ms</div>
+                <div class="badge" id="u-update-status">status: –</div>
+                <div class="badge" id="u-update-time">time: – ms</div>
                 <div class="spacer"></div>
             </div>
         </section>
 
-        <!-- DELETE -->
-        <section class="card route" data-route="/delete" hidden>
-            <h2>Delete user</h2>
+        <!-- USERS: DELETE -->
+        <section class="card route" data-route="/users/delete" hidden>
+            <h2>Users · Delete</h2>
             <div class="desc">DELETE <code>/api/users?id=…</code> (или body)</div>
-            <form class="form" id="form-delete">
+            <form class="form" id="form-u-delete">
                 <div class="row">
-                    <label for="delete-id">ID (required)</label>
-                    <input id="delete-id" type="number" placeholder="id пользователя" required />
+                    <label for="u-delete-id">ID (required)</label>
+                    <input id="u-delete-id" type="number" placeholder="id пользователя" required />
                 </div>
                 <div class="actions">
-                    <button class="btn danger" type="submit" id="btn-delete">Delete</button>
-                    <button class="btn secondary" type="button" id="btn-delete-clear">Clear</button>
+                    <button class="btn danger" type="submit" id="btn-u-delete">Delete</button>
+                    <button class="btn secondary" type="button" id="btn-u-delete-clear">Clear</button>
                 </div>
-                <div class="hint">Перед удалением спросим подтверждение.</div>
             </form>
             <div class="statusbar" style="margin-top:10px">
-                <div class="badge" id="delete-status">status: –</div>
-                <div class="badge" id="delete-time">time: – ms</div>
+                <div class="badge" id="u-delete-status">status: –</div>
+                <div class="badge" id="u-delete-time">time: – ms</div>
+                <div class="spacer"></div>
+            </div>
+        </section>
+
+        <!-- PRODUCTS: LIST -->
+        <section class="card route" data-route="/products/list" hidden>
+            <h2>Products · List</h2>
+            <div class="desc">GET <code>/api/products</code>. Локальная фильтрация по имени/описанию.</div>
+            <div class="actions">
+                <button class="btn" id="btn-plist-refresh">Refresh</button>
+                <input id="p-filter" placeholder="Фильтр по name/description…" />
+            </div>
+            <div class="table-wrap" style="margin-top:12px">
+                <table id="p-table">
+                    <thead><tr><th>ID</th><th>Name</th><th>Description</th><th>Price</th><th>Image</th></tr></thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            <div class="statusbar" style="margin-top:10px">
+                <div class="badge" id="p-list-status">status: –</div>
+                <div class="badge" id="p-list-time">time: – ms</div>
+                <div class="spacer"></div>
+            </div>
+        </section>
+
+        <!-- PRODUCTS: GET -->
+        <section class="card route" data-route="/products/get" hidden>
+            <h2>Products · Get by ID</h2>
+            <div class="desc">GET <code>/api/products?id=…</code></div>
+            <form class="form" id="form-p-get">
+                <div class="row">
+                    <label for="p-get-id">ID (integer)</label>
+                    <input id="p-get-id" type="number" placeholder="Напр. 1760…" required />
+                </div>
+                <div class="actions">
+                    <button class="btn" type="submit" id="btn-p-get">Fetch</button>
+                    <button class="btn secondary" type="button" id="btn-p-get-clear">Clear</button>
+                </div>
+            </form>
+            <div style="margin-top:10px"><pre id="p-get-output">—</pre></div>
+            <div class="statusbar" style="margin-top:10px">
+                <div class="badge" id="p-get-status">status: –</div>
+                <div class="badge" id="p-get-time">time: – ms</div>
+                <div class="spacer"></div>
+            </div>
+        </section>
+
+        <!-- PRODUCTS: CREATE -->
+        <section class="card route" data-route="/products/create" hidden>
+            <h2>Products · Create</h2>
+            <div class="desc">POST <code>/api/products</code></div>
+            <form class="form" id="form-p-create">
+                <div class="row">
+                    <label for="p-create-name">Name</label>
+                    <input id="p-create-name" placeholder="Product name" required />
+                </div>
+                <div class="row">
+                    <label for="p-create-description">Description</label>
+                    <textarea id="p-create-description" placeholder="Short description" required></textarea>
+                </div>
+                <div class="row">
+                    <label for="p-create-price">Price (cents)</label>
+                    <input id="p-create-price" type="number" min="0" step="1" placeholder="e.g. 1999" required />
+                </div>
+                <div class="row">
+                    <label for="p-create-image">Image URL (optional)</label>
+                    <input id="p-create-image" type="url" placeholder="https://…" />
+                </div>
+                <div class="actions">
+                    <button class="btn" type="submit" id="btn-p-create">Create</button>
+                    <button class="btn secondary" type="button" id="btn-p-create-clear">Clear</button>
+                </div>
+            </form>
+            <div class="statusbar" style="margin-top:10px">
+                <div class="badge" id="p-create-status">status: –</div>
+                <div class="badge" id="p-create-time">time: – ms</div>
+                <div class="spacer"></div>
+            </div>
+        </section>
+
+        <!-- PRODUCTS: UPDATE -->
+        <section class="card route" data-route="/products/update" hidden>
+            <h2>Products · Update</h2>
+            <div class="desc">PUT <code>/api/products</code></div>
+            <form class="form" id="form-p-update">
+                <div class="row">
+                    <label for="p-update-id">ID (required)</label>
+                    <input id="p-update-id" type="number" placeholder="id товара" required />
+                </div>
+                <div class="row">
+                    <label for="p-update-name">Name (optional)</label>
+                    <input id="p-update-name" placeholder="Новое название (опционально)" />
+                </div>
+                <div class="row">
+                    <label for="p-update-description">Description (optional)</label>
+                    <textarea id="p-update-description" placeholder="Новое описание (опционально)"></textarea>
+                </div>
+                <div class="row">
+                    <label for="p-update-price">Price (cents, optional)</label>
+                    <input id="p-update-price" type="number" min="0" step="1" placeholder="Напр. 2999" />
+                </div>
+                <div class="row">
+                    <label for="p-update-image">Image URL (optional)</label>
+                    <input id="p-update-image" type="url" placeholder="https://…" />
+                </div>
+                <div class="actions">
+                    <button class="btn" type="submit" id="btn-p-update">Update</button>
+                    <button class="btn secondary" type="button" id="btn-p-update-clear">Clear</button>
+                </div>
+            </form>
+            <div class="statusbar" style="margin-top:10px">
+                <div class="badge" id="p-update-status">status: –</div>
+                <div class="badge" id="p-update-time">time: – ms</div>
+                <div class="spacer"></div>
+            </div>
+        </section>
+
+        <!-- PRODUCTS: DELETE -->
+        <section class="card route" data-route="/products/delete" hidden>
+            <h2>Products · Delete</h2>
+            <div class="desc">DELETE <code>/api/products?id=…</code> (или body)</div>
+            <form class="form" id="form-p-delete">
+                <div class="row">
+                    <label for="p-delete-id">ID (required)</label>
+                    <input id="p-delete-id" type="number" placeholder="id товара" required />
+                </div>
+                <div class="actions">
+                    <button class="btn danger" type="submit" id="btn-p-delete">Delete</button>
+                    <button class="btn secondary" type="button" id="btn-p-delete-clear">Clear</button>
+                </div>
+            </form>
+            <div class="statusbar" style="margin-top:10px">
+                <div class="badge" id="p-delete-status">status: –</div>
+                <div class="badge" id="p-delete-time">time: – ms</div>
                 <div class="spacer"></div>
             </div>
         </section>
@@ -297,34 +439,28 @@
     const $$ = sel => [...document.querySelectorAll(sel)];
     const loader = $('#loader');
     const toasts = $('#toasts');
-    const nav = $('#nav');
 
     function setActiveRoute(route){
-      $$('.nav a').forEach(a => a.classList.toggle('active', a.dataset.route === route));
+      // подсветка ссылок
+      $$('#nav-users a, #nav-products a').forEach(a => a.classList.toggle('active', a.dataset.route === route));
+      // показать нужный экран
       $$('.route').forEach(s => s.hidden = s.dataset.route !== route);
     }
-
     function startLoading(){ loader.style.width='25%'; setTimeout(()=>loader.style.width='80%',10); }
     function stopLoading(){ loader.style.width='100%'; setTimeout(()=>loader.style.width='0',350); }
-
     function toast(msg, kind='ok', timeout=2600){
       const el = document.createElement('div');
-      el.className = 'toast '+kind;
-      el.textContent = msg;
-      toasts.appendChild(el);
-      setTimeout(()=>{ el.style.opacity='0'; setTimeout(()=>el.remove(),260); }, timeout);
+      el.className = 'toast '+kind; el.textContent = msg;
+      toasts.appendChild(el); setTimeout(()=>{ el.style.opacity='0'; setTimeout(()=>el.remove(),260); }, timeout);
     }
-
     function setStatus(where, code, ms){
-      $(`#${where}-status`).textContent = 'status: '+code;
-      $(`#${where}-time`).textContent = 'time: '+ms+' ms';
-      const ok = code>=200 && code<300;
-      $(`#${where}-status`).className = 'badge '+(ok?'ok':'err');
+      const s = $(`#${where}-status`), t = $(`#${where}-time`);
+      if(!s || !t) return;
+      s.textContent = 'status: '+code; t.textContent = 'time: '+ms+' ms';
+      s.className = 'badge '+(code>=200 && code<300 ? 'ok':'err');
     }
-
     async function request(where, method, url, body){
-      const t0 = performance.now();
-      startLoading();
+      const t0 = performance.now(); startLoading();
       try{
         const res = await fetch(url, {
           method,
@@ -332,31 +468,30 @@
           body: body ? JSON.stringify(body) : undefined
         });
         const text = await res.text();
-        let data;
-        try { data = text ? JSON.parse(text) : null; } catch { data = { raw:text }; }
+        let data; try{ data = text ? JSON.parse(text) : null; } catch { data = { raw:text }; }
         const dt = Math.round(performance.now() - t0);
         setStatus(where, res.status, dt);
         if(!res.ok) throw Object.assign(new Error((data && data.error) || text || res.statusText), { status: res.status, data });
         return data;
-      } finally {
-        stopLoading();
-      }
+      } finally { stopLoading(); }
     }
+    function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
-    // -------- List --------
-    const tableBody = $('#users-table tbody');
-    const filterInput = $('#list-filter');
-    $('#btn-list-refresh').addEventListener('click', loadList);
-    filterInput.addEventListener('input', applyFilter);
+    // ========= USERS =========
+    // List
+    const uTableBody = $('#u-table tbody');
+    const uFilter = $('#u-filter');
+    $('#btn-ulist-refresh')?.addEventListener('click', loadUsers);
+    uFilter?.addEventListener('input', applyUsersFilter);
 
     let cachedUsers = [];
-    async function loadList(){
-      const data = await request('list','GET','/api/users');
+    async function loadUsers(){
+      const data = await request('u-list','GET','/api/users');
       cachedUsers = data.users || [];
-      renderTable(cachedUsers);
+      renderUsers(cachedUsers);
     }
-    function renderTable(rows){
-      tableBody.innerHTML = rows.map(r => `
+    function renderUsers(rows){
+      uTableBody.innerHTML = rows.map(r => `
         <tr>
           <td>${escapeHtml(r.id)}</td>
           <td>${escapeHtml(r.name)}</td>
@@ -365,95 +500,195 @@
         </tr>
       `).join('');
     }
-    function applyFilter(){
-      const q = filterInput.value.trim().toLowerCase();
-      if(!q) return renderTable(cachedUsers);
+    function applyUsersFilter(){
+      const q = uFilter.value.trim().toLowerCase();
+      if(!q) return renderUsers(cachedUsers);
       const out = cachedUsers.filter(u =>
         String(u.name||'').toLowerCase().includes(q) ||
         String(u.email||'').toLowerCase().includes(q)
       );
-      renderTable(out);
+      renderUsers(out);
     }
 
-    // -------- Get by ID --------
-    const getForm = $('#form-get');
-    const getOut = $('#get-output');
-    $('#btn-get-clear').addEventListener('click', ()=>{ $('#get-id').value=''; getOut.textContent='—'; setStatus('get','–','–'); });
-    getForm.addEventListener('submit', async (e)=>{
+    // Get
+    $('#btn-u-get-clear')?.addEventListener('click', ()=>{ $('#u-get-id').value=''; $('#u-get-output').textContent='—'; setStatus('u-get','–','–'); });
+    $('#form-u-get')?.addEventListener('submit', async (e)=>{
       e.preventDefault();
-      const id = Number($('#get-id').value);
+      const id = Number($('#u-get-id').value);
       if(!Number.isInteger(id)) return toast('ID должен быть целым числом','err');
       try{
-        const data = await request('get','GET',`/api/users?id=${id}`);
-        getOut.textContent = JSON.stringify(data, null, 2);
-      }catch(err){ getOut.textContent = (err.data && JSON.stringify(err.data,null,2)) || err.message; toast('Ошибка получения','err'); }
+        const data = await request('u-get','GET',`/api/users?id=${id}`);
+        $('#u-get-output').textContent = JSON.stringify(data, null, 2);
+      }catch(err){ $('#u-get-output').textContent = (err.data && JSON.stringify(err.data,null,2)) || err.message; toast('Ошибка получения','err'); }
     });
 
-    // -------- Create --------
-    const createForm = $('#form-create');
-    $('#btn-create-clear').addEventListener('click', ()=>{ $('#create-name').value=''; $('#create-email').value=''; setStatus('create','–','–'); });
-    createForm.addEventListener('submit', async (e)=>{
+    // Create
+    $('#btn-u-create-clear')?.addEventListener('click', ()=>{ $('#u-create-name').value=''; $('#u-create-email').value=''; setStatus('u-create','–','–'); });
+    $('#form-u-create')?.addEventListener('submit', async (e)=>{
       e.preventDefault();
-      const name = $('#create-name').value.trim();
-      const email = $('#create-email').value.trim();
+      const name = $('#u-create-name').value.trim();
+      const email = $('#u-create-email').value.trim();
       if(!name || !email) return toast('Заполните name и email','err');
       try{
-        const data = await request('create','POST','/api/users', { name, email });
-        toast('Created: id '+data.id,'ok');
-        // Авто-обновление списка, если открыта вкладка List
-        if(location.hash === '#/list'){ loadList(); }
-        // Сброс формы
-        $('#create-name').value=''; $('#create-email').value='';
+        const data = await request('u-create','POST','/api/users', { name, email });
+        toast('User created: id '+data.id,'ok');
+        if(location.hash === '#/users/list'){ loadUsers(); }
+        $('#u-create-name').value=''; $('#u-create-email').value='';
       }catch(err){ toast(err.message || 'Create error','err'); }
     });
 
-    // -------- Update --------
-    const updateForm = $('#form-update');
-    $('#btn-update-clear').addEventListener('click', ()=>{ $('#update-id').value=''; $('#update-name').value=''; $('#update-email').value=''; setStatus('update','–','–'); });
-    updateForm.addEventListener('submit', async (e)=>{
+    // Update
+    $('#btn-u-update-clear')?.addEventListener('click', ()=>{ $('#u-update-id').value=''; $('#u-update-name').value=''; $('#u-update-email').value=''; setStatus('u-update','–','–'); });
+    $('#form-u-update')?.addEventListener('submit', async (e)=>{
       e.preventDefault();
-      const id = Number($('#update-id').value);
-      const name = $('#update-name').value.trim();
-      const email = $('#update-email').value.trim();
+      const id = Number($('#u-update-id').value);
+      const name = $('#u-update-name').value.trim();
+      const email = $('#u-update-email').value.trim();
       if(!Number.isInteger(id)) return toast('ID должен быть целым числом','err');
       if(!name && !email) return toast('Укажите новое name и/или email','err');
       try{
-        await request('update','PUT','/api/users', { id, name: name || undefined, email: email || undefined });
-        toast('Updated','ok');
-        if(location.hash === '#/list'){ loadList(); }
+        await request('u-update','PUT','/api/users', { id, name: name || undefined, email: email || undefined });
+        toast('User updated','ok');
+        if(location.hash === '#/users/list'){ loadUsers(); }
       }catch(err){ toast(err.message || 'Update error','err'); }
     });
 
-    // -------- Delete --------
-    const deleteForm = $('#form-delete');
-    $('#btn-delete-clear').addEventListener('click', ()=>{ $('#delete-id').value=''; setStatus('delete','–','–'); });
-    deleteForm.addEventListener('submit', async (e)=>{
+    // Delete
+    $('#btn-u-delete-clear')?.addEventListener('click', ()=>{ $('#u-delete-id').value=''; setStatus('u-delete','–','–'); });
+    $('#form-u-delete')?.addEventListener('submit', async (e)=>{
       e.preventDefault();
-      const id = Number($('#delete-id').value);
+      const id = Number($('#u-delete-id').value);
       if(!Number.isInteger(id)) return toast('ID должен быть целым числом','err');
       if(!confirm(`Удалить пользователя id=${id}?`)) return;
       try{
-        await request('delete','DELETE',`/api/users?id=${id}`);
-        toast('Deleted','ok');
-        if(location.hash === '#/list'){ loadList(); }
-        $('#delete-id').value='';
+        await request('u-delete','DELETE',`/api/users?id=${id}`);
+        toast('User deleted','ok');
+        if(location.hash === '#/users/list'){ loadUsers(); }
+        $('#u-delete-id').value='';
+      }catch(err){ toast(err.message || 'Delete error','err'); }
+    });
+
+    // ========= PRODUCTS =========
+    // List
+    const pTableBody = $('#p-table tbody');
+    const pFilter = $('#p-filter');
+    $('#btn-plist-refresh')?.addEventListener('click', loadProducts);
+    pFilter?.addEventListener('input', applyProductsFilter);
+
+    let cachedProducts = [];
+    async function loadProducts(){
+      const data = await request('p-list','GET','/api/products');
+      cachedProducts = data.products || [];
+      renderProducts(cachedProducts);
+    }
+    function moneyCents(n){ return (Number(n)/100).toFixed(2); }
+    function renderProducts(rows){
+      pTableBody.innerHTML = rows.map(r => `
+        <tr>
+          <td>${escapeHtml(r.id)}</td>
+          <td>${escapeHtml(r.name)}</td>
+          <td>${escapeHtml(r.description)}</td>
+          <td>${escapeHtml(moneyCents(r.price_cents))}</td>
+          <td>${r.image_url ? `<a href="${escapeHtml(r.image_url)}" target="_blank" rel="noopener">image</a>` : '—'}</td>
+        </tr>
+      `).join('');
+    }
+    function applyProductsFilter(){
+      const q = pFilter.value.trim().toLowerCase();
+      if(!q) return renderProducts(cachedProducts);
+      const out = cachedProducts.filter(p =>
+        String(p.name||'').toLowerCase().includes(q) ||
+        String(p.description||'').toLowerCase().includes(q)
+      );
+      renderProducts(out);
+    }
+
+    // Get
+    $('#btn-p-get-clear')?.addEventListener('click', ()=>{ $('#p-get-id').value=''; $('#p-get-output').textContent='—'; setStatus('p-get','–','–'); });
+    $('#form-p-get')?.addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      const id = Number($('#p-get-id').value);
+      if(!Number.isInteger(id)) return toast('ID должен быть целым числом','err');
+      try{
+        const data = await request('p-get','GET',`/api/products?id=${id}`);
+        $('#p-get-output').textContent = JSON.stringify(data, null, 2);
+      }catch(err){ $('#p-get-output').textContent = (err.data && JSON.stringify(err.data,null,2)) || err.message; toast('Ошибка получения','err'); }
+    });
+
+    // Create
+    $('#btn-p-create-clear')?.addEventListener('click', ()=>{ $('#p-create-name').value=''; $('#p-create-description').value=''; $('#p-create-price').value=''; $('#p-create-image').value=''; setStatus('p-create','–','–'); });
+    $('#form-p-create')?.addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      const name = $('#p-create-name').value.trim();
+      const description = $('#p-create-description').value.trim();
+      const price_cents = Number($('#p-create-price').value);
+      const image_url = $('#p-create-image').value.trim();
+      if(!name || !description || !Number.isInteger(price_cents) || price_cents < 0) return toast('Заполните name, description и корректный price_cents','err');
+      try{
+        const data = await request('p-create','POST','/api/products', { name, description, price_cents, image_url: image_url || undefined });
+        toast('Product created: id '+data.id,'ok');
+        if(location.hash === '#/products/list'){ loadProducts(); }
+        $('#btn-p-create-clear').click();
+      }catch(err){ toast(err.message || 'Create error','err'); }
+    });
+
+    // Update
+    $('#btn-p-update-clear')?.addEventListener('click', ()=>{ $('#p-update-id').value=''; $('#p-update-name').value=''; $('#p-update-description').value=''; $('#p-update-price').value=''; $('#p-update-image').value=''; setStatus('p-update','–','–'); });
+    $('#form-p-update')?.addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      const id = Number($('#p-update-id').value);
+      const name = $('#p-update-name').value.trim();
+      const description = $('#p-update-description').value.trim();
+      const price_raw = $('#p-update-price').value.trim();
+      const image_url = $('#p-update-image').value.trim();
+
+      if(!Number.isInteger(id)) return toast('ID должен быть целым числом','err');
+
+      const body = { id };
+      if(name) body.name = name;
+      if(description) body.description = description;
+      if(price_raw){
+        const pc = Number(price_raw);
+        if(!Number.isInteger(pc) || pc < 0) return toast('price_cents должен быть неотрицательным целым','err');
+        body.price_cents = pc;
+      }
+      if(image_url) body.image_url = image_url;
+
+      if(Object.keys(body).length === 1) return toast('Нечего обновлять','err'); // только id
+
+      try{
+        await request('p-update','PUT','/api/products', body);
+        toast('Product updated','ok');
+        if(location.hash === '#/products/list'){ loadProducts(); }
+      }catch(err){ toast(err.message || 'Update error','err'); }
+    });
+
+    // Delete
+    $('#btn-p-delete-clear')?.addEventListener('click', ()=>{ $('#p-delete-id').value=''; setStatus('p-delete','–','–'); });
+    $('#form-p-delete')?.addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      const id = Number($('#p-delete-id').value);
+      if(!Number.isInteger(id)) return toast('ID должен быть целым числом','err');
+      if(!confirm(`Удалить товар id=${id}?`)) return;
+      try{
+        await request('p-delete','DELETE',`/api/products?id=${id}`);
+        toast('Product deleted','ok');
+        if(location.hash === '#/products/list'){ loadProducts(); }
+        $('#p-delete-id').value='';
       }catch(err){ toast(err.message || 'Delete error','err'); }
     });
 
     // -------- Routing --------
     function navigate(){
-      const route = (location.hash.slice(1) || '/list');
+      const route = (location.hash.slice(1) || '/users/list');
       setActiveRoute(route);
-      if(route==='/list'){ loadList().catch(()=>{}); }
+      // авто-обновления на списках
+      if(route==='/users/list'){ loadUsers().catch(()=>{}); }
+      if(route==='/products/list'){ loadProducts().catch(()=>{}); }
     }
     window.addEventListener('hashchange', navigate);
-    if(!location.hash) location.hash = '#/list';
+    if(!location.hash) location.hash = '#/users/list';
     navigate();
-
-    // -------- Utils --------
-    function escapeHtml(s){
-      return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-    }
 </script>
 </body>
 </html>
