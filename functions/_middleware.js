@@ -1,60 +1,78 @@
 // functions/_middleware.js
 export async function onRequest(ctx) {
-  const { request, env } = ctx;
-  const url = new URL(request.url);
-  const path = url.pathname;
+  try {
+    const { request, env } = ctx;
+    const url = new URL(request.url);
+    const path = url.pathname;
 
-  // Открытые маршруты (логин, статика, auth-API, главная)
-  const openExact = new Set([
-    '/', '/index.html',
-    '/login.html',
-    '/api/auth/request-code',
-    '/api/auth/verify-code',
-    '/api/auth/logout',
-  ]);
+    // Открытые маршруты (старт/логин/статик/авторизация)
+    const openExact = new Set([
+      '/', '/index.html',
+      '/login.html',
+      '/api/auth/request-code',
+      '/api/auth/verify-code',
+      '/api/auth/logout',
+    ]);
+    const openPrefix = [
+      '/assets/', '/favicon', '/robots.txt',
+      '/_workers/', '/.well-known/',
+    ];
 
-  const isOpen =
-    openExact.has(path) ||
-    path.startsWith('/assets/') ||      // CSS/JS
-    path.startsWith('/favicon') ||      // фавиконки
-    path.startsWith('/robots.txt') ||   // служебное
-    path.startsWith('/_workers/') ||    // служебное
-    path.startsWith('/.well-known/');   // служебное
+    // Пропускаем OPTIONS без проверки сессии (preflight)
+    if (request.method === 'OPTIONS') {
+      return new Response(null, { status: 204 });
+    }
 
-  if (isOpen) {
-    // важно: пропускаем дальше к статике/функциям
-    return ctx.next();
+    const isOpen =
+      openExact.has(path) ||
+      openPrefix.some(p => path.startsWith(p));
+
+    if (isOpen) {
+      // Важно: именно await
+      return await ctx.next();
+    }
+
+    // --- проверка сессии ---
+    const cookies = parseCookie(request.headers.get('cookie') || '');
+    const sid = cookies['sid'];
+    if (!sid) return redirectToLogin(url);
+
+    // D1 может быть не привязан — не роняем воркер
+    if (!env.edu_rppa_db) {
+      console.log({ middleware_error: 'D1 binding is undefined' });
+      return redirectToLogin(url);
+    }
+
+    const row = await env.edu_rppa_db
+      .prepare('SELECT email, expires_at FROM sessions WHERE session_id = ?')
+      .bind(sid).first();
+
+    const now = Math.floor(Date.now() / 1000);
+    if (!row || row.expires_at < now) {
+      return redirectToLogin(url);
+    }
+
+    // Авторизовано → пропускаем к статике/функциям
+    return await ctx.next();
+  } catch (e) {
+    // Никогда не оставляем без ответа — лог и 500
+    console.log({ middleware_unhandled: String(e) });
+    return new Response('Internal error (middleware)', { status: 500 });
   }
-
-  // --- проверка сессии ---
-  const cookies = parseCookie(request.headers.get('cookie') || '');
-  const sid = cookies['sid'];
-  if (!sid) return redirectToLogin(url);
-
-  // верифицируем сессию
-  const row = await env.edu_rppa_db
-    .prepare('SELECT email, expires_at FROM sessions WHERE session_id = ?')
-    .bind(sid).first();
-
-  const now = Math.floor(Date.now()/1000);
-  if (!row || row.expires_at < now) {
-    return redirectToLogin(url);
-  }
-
-  // ок — даём продолжить
-  return ctx.next();
 }
 
 function redirectToLogin(url) {
-  const to = '/login.html?next=' + encodeURIComponent(url.pathname + url.search);
-  return Response.redirect(to, 302);
+  const login = new URL('/login.html', url.origin);
+  login.searchParams.set('next', url.pathname + url.search);
+  return Response.redirect(login, 302);
 }
 
 function parseCookie(str) {
   const out = {};
+  if (!str) return out;
   str.split(';').forEach(p => {
     const i = p.indexOf('=');
-    if (i>0) out[p.slice(0,i).trim()] = decodeURIComponent(p.slice(i+1));
+    if (i > 0) out[p.slice(0, i).trim()] = decodeURIComponent(p.slice(i + 1));
   });
   return out;
 }
