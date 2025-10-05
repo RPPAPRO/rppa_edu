@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <title>edu_rppa · Login</title>
+    <link rel="stylesheet" href="/assets/app.css"/>
+</head>
+<body>
+<header class="topbar">
+    <div class="logo">edu_rppa</div>
+    <div class="subtitle">Login</div>
+    <div class="spacer"></div>
+</header>
+
+<main class="content-narrow">
+    <section class="card">
+        <h2>Вход по e-mail</h2>
+        <p class="desc">Мы отправим 6-значный код на почту. В демо-режиме код вернётся в ответе/логах.</p>
+
+        <form class="form" id="form-send">
+            <div class="row">
+                <label for="email">Email</label>
+                <input id="email" type="email" placeholder="you@example.com" required/>
+            </div>
+            <div class="actions">
+                <button class="btn" type="submit" id="btn-send">Получить код</button>
+            </div>
+        </form>
+
+        <form class="form" id="form-verify" style="margin-top:12px">
+            <div class="row">
+                <label for="code">Код</label>
+                <input id="code" inputmode="numeric" maxlength="6" placeholder="123456" required/>
+            </div>
+            <div class="actions">
+                <button class="btn" type="submit" id="btn-verify">Войти</button>
+                <button class="btn secondary" type="button" id="btn-clear">Очистить</button>
+            </div>
+        </form>
+
+        <pre id="output" class="mt12">—</pre>
+    </section>
+</main>
+
+<div class="loader" id="loader"></div>
+<div class="toasts" id="toasts"></div>
+<script src="/assets/app.js"></script>
+<script>
+    const out = document.getElementById('output');
+    const emailEl = document.getElementById('email');
+    const codeEl  = document.getElementById('code');
+    const next = new URLSearchParams(location.search).get('next') || '/';
+
+    document.getElementById('form-send').addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      const email = emailEl.value.trim();
+      if(!email) return toast('Введите e-mail','err');
+      const res = await apiRequest('auth-send','POST','/api/auth/request-code',{ email }).catch(err=>err);
+      out.textContent = JSON.stringify(res, null, 2);
+      if(res && res.demo_code) {
+        codeEl.value = res.demo_code;
+        toast('Код сгенерирован (demo)','ok');
+      }
+    });
+
+    document.getElementById('form-verify').addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      const email = emailEl.value.trim();
+      const code  = codeEl.value.trim();
+      if(!email || !code) return toast('E-mail и код обязательны','err');
+      const res = await apiRequest('auth-verify','POST','/api/auth/verify-code',{ email, code }).catch(err=>err);
+      out.textContent = JSON.stringify(res, null, 2);
+      if(res && res.ok){ toast('Успешный вход','ok'); setTimeout(()=>location.href = next, 400); }
+    });
+
+    document.getElementById('btn-clear').addEventListener('click', ()=>{
+      codeEl.value=''; out.textContent='—';
+    });
+</script>
+</body>
+</html>

@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <title>edu_rppa · Products</title>
+    <link rel="stylesheet" href="/assets/app.css"/>
+</head>
+<body>
+<header class="topbar">
+    <div class="logo">edu_rppa</div>
+    <div class="subtitle">Products</div>
+    <nav class="links">
+        <a href="/">Home</a>
+        <a href="/users/">Users</a>
+        <a class="active" href="/products/">Products</a>
+    </nav>
+    <div class="spacer"></div>
+    <button class="btn secondary" id="btn-logout">Logout</button>
+</header>
+
+<div class="wrap">
+    <aside class="sidebar">
+        <div class="group-title">Products</div>
+        <nav class="nav" id="nav">
+            <a href="#/list"   data-route="/list">List (GET)</a>
+            <a href="#/get"    data-route="/get">Get by ID (GET)</a>
+            <a href="#/create" data-route="/create">Create (POST)</a>
+            <a href="#/update" data-route="/update">Update (PUT)</a>
+            <a href="#/delete" data-route="/delete">Delete (DELETE)</a>
+        </nav>
+    </aside>
+
+    <main class="content">
+        <!-- LIST -->
+        <section class="card route" data-route="/list">
+            <h2>List products</h2>
+            <div class="desc">GET <code>/api/products</code></div>
+            <div class="actions">
+                <button class="btn" id="btn-plist-refresh">Refresh</button>
+                <input id="p-filter" placeholder="Фильтр по name/description…"/>
+            </div>
+            <div class="table-wrap mt12">
+                <table id="p-table">
+                    <thead><tr><th>ID</th><th>Name</th><th>Description</th><th>Price</th><th>Image</th></tr></thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            <div class="statusbar mt10">
+                <div class="badge" id="p-list-status">status: –</div>
+                <div class="badge" id="p-list-time">time: – ms</div>
+                <div class="spacer"></div>
+            </div>
+        </section>
+
+        <!-- GET -->
+        <section class="card route" data-route="/get" hidden>
+            <h2>Get product by ID</h2>
+            <div class="desc">GET <code>/api/products?id=…</code></div>
+            <form class="form" id="form-p-get">
+                <div class="row"><label for="p-get-id">ID</label><input id="p-get-id" type="number" required/></div>
+                <div class="actions">
+                    <button class="btn" type="submit">Fetch</button>
+                    <button class="btn secondary" type="button" id="btn-p-get-clear">Clear</button>
+                </div>
+            </form>
+            <pre id="p-get-output" class="mt12">—</pre>
+            <div class="statusbar mt10">
+                <div class="badge" id="p-get-status">status: –</div>
+                <div class="badge" id="p-get-time">time: – ms</div>
+                <div class="spacer"></div>
+            </div>
+        </section>
+
+        <!-- CREATE -->
+        <section class="card route" data-route="/create" hidden>
+            <h2>Create product</h2>
+            <div class="desc">POST <code>/api/products</code></div>
+            <form class="form" id="form-p-create">
+                <div class="row"><label>Name</label><input id="p-create-name" required/></div>
+                <div class="row"><label>Description</label><textarea id="p-create-description" required></textarea></div>
+                <div class="row"><label>Price (cents)</label><input id="p-create-price" type="number" min="0" step="1" required/></div>
+                <div class="row"><label>Image URL</label><input id="p-create-image" type="url" placeholder="https://…"/></div>
+                <div class="actions">
+                    <button class="btn" type="submit">Create</button>
+                    <button class="btn secondary" type="button" id="btn-p-create-clear">Clear</button>
+                </div>
+            </form>
+            <div class="statusbar mt10">
+                <div class="badge" id="p-create-status">status: –</div>
+                <div class="badge" id="p-create-time">time: – ms</div>
+                <div class="spacer"></div>
+            </div>
+        </section>
+
+        <!-- UPDATE -->
+        <section class="card route" data-route="/update" hidden>
+            <h2>Update product</h2>
+            <div class="desc">PUT <code>/api/products</code></div>
+            <form class="form" id="form-p-update">
+                <div class="row"><label>ID</label><input id="p-update-id" type="number" required/></div>
+                <div class="row"><label>Name</label><input id="p-update-name"/></div>
+                <div class="row"><label>Description</label><textarea id="p-update-description"></textarea></div>
+                <div class="row"><label>Price (cents)</label><input id="p-update-price" type="number" min="0" step="1"/></div>
+                <div class="row"><label>Image URL</label><input id="p-update-image" type="url"/></div>
+                <div class="actions">
+                    <button class="btn" type="submit">Update</button>
+                    <button class="btn secondary" type="button" id="btn-p-update-clear">Clear</button>
+                </div>
+            </form>
+            <div class="statusbar mt10">
+                <div class="badge" id="p-update-status">status: –</div>
+                <div class="badge" id="p-update-time">time: – ms</div>
+                <div class="spacer"></div>
+            </div>
+        </section>
+
+        <!-- DELETE -->
+        <section class="card route" data-route="/delete" hidden>
+            <h2>Delete product</h2>
+            <div class="desc">DELETE <code>/api/products?id=…</code></div>
+            <form class="form" id="form-p-delete">
+                <div class="row"><label>ID</label><input id="p-delete-id" type="number" required/></div>
+                <div class="actions">
+                    <button class="btn danger" type="submit">Delete</button>
+                    <button class="btn secondary" type="button" id="btn-p-delete-clear">Clear</button>
+                </div>
+            </form>
+            <div class="statusbar mt10">
+                <div class="badge" id="p-delete-status">status: –</div>
+                <div class="badge" id="p-delete-time">time: – ms</div>
+                <div class="spacer"></div>
+            </div>
+        </section>
+    </main>
+</div>
+
+<div class="loader" id="loader"></div>
+<div class="toasts" id="toasts"></div>
+<script src="/assets/app.js"></script>
+<script>
+    // общие
+    bindLogout('#btn-logout');
+    initHashRouter('#nav', '/list', (route)=>{
+      if(route==='/list') loadProducts();
+    });
+
+    // Products logic
+    const pTableBody = document.querySelector('#p-table tbody');
+    const pFilter    = document.querySelector('#p-filter');
+
+    document.getElementById('btn-plist-refresh').addEventListener('click', loadProducts);
+    pFilter.addEventListener('input', applyProductsFilter);
+
+    let cachedProducts = [];
+    async function loadProducts(){
+      const data = await apiRequest('p-list','GET','/api/products');
+      cachedProducts = data.products || [];
+      renderProducts(cachedProducts);
+    }
+    function moneyCents(n){ return (Number(n)/100).toFixed(2); }
+    function renderProducts(rows){
+      pTableBody.innerHTML = rows.map(r => `
+        <tr>
+          <td>${esc(r.id)}</td>
+          <td>${esc(r.name)}</td>
+          <td>${esc(r.description)}</td>
+          <td>${esc(moneyCents(r.price_cents))}</td>
+          <td>${r.image_url ? `<a href="${esc(r.image_url)}" target="_blank" rel="noopener">image</a>` : '—'}</td>
+        </tr>
+      `).join('');
+    }
+    function applyProductsFilter(){
+      const q = pFilter.value.trim().toLowerCase();
+      if(!q) return renderProducts(cachedProducts);
+      const out = cachedProducts.filter(p =>
+        String(p.name||'').toLowerCase().includes(q) ||
+        String(p.description||'').toLowerCase().includes(q)
+      );
+      renderProducts(out);
+    }
+
+    // GET
+    document.getElementById('btn-p-get-clear').addEventListener('click', ()=>{
+      document.getElementById('p-get-id').value=''; document.getElementById('p-get-output').textContent='—';
+      setStatus('p-get','–','–');
+    });
+    document.getElementById('form-p-get').addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      const id = Number(document.getElementById('p-get-id').value);
+      if(!Number.isInteger(id)) return toast('ID должен быть целым числом','err');
+      try{
+        const data = await apiRequest('p-get','GET',`/api/products?id=${id}`);
+        document.getElementById('p-get-output').textContent = JSON.stringify(data, null, 2);
+      }catch(err){ document.getElementById('p-get-output').textContent = errText(err); }
+    });
+
+    // CREATE
+    document.getElementById('btn-p-create-clear').addEventListener('click', ()=>{
+      ['p-create-name','p-create-description','p-create-price','p-create-image'].forEach(id=>document.getElementById(id).value='');
+      setStatus('p-create','–','–');
+    });
+    document.getElementById('form-p-create').addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      const name = document.getElementById('p-create-name').value.trim();
+      const description = document.getElementById('p-create-description').value.trim();
+      const price_cents = Number(document.getElementById('p-create-price').value);
+      const image_url   = document.getElementById('p-create-image').value.trim();
+      if(!name || !description || !Number.isInteger(price_cents) || price_cents<0) return toast('Введите name, description и корректный price_cents','err');
+      await apiRequest('p-create','POST','/api/products',{ name, description, price_cents, image_url: image_url || undefined });
+      toast('Product created','ok');
+      if(location.hash==='#/list') loadProducts();
+      document.getElementById('btn-p-create-clear').click();
+    });
+
+    // UPDATE
+    document.getElementById('btn-p-update-clear').addEventListener('click', ()=>{
+      ['p-update-id','p-update-name','p-update-description','p-update-price','p-update-image'].forEach(id=>document.getElementById(id).value='');
+      setStatus('p-update','–','–');
+    });
+    document.getElementById('form-p-update').addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      const id = Number(document.getElementById('p-update-id').value);
+      const name = document.getElementById('p-update-name').value.trim();
+      const description = document.getElementById('p-update-description').value.trim();
+      const price_raw = document.getElementById('p-update-price').value.trim();
+      const image_url = document.getElementById('p-update-image').value.trim();
+
+      if(!Number.isInteger(id)) return toast('ID должен быть целым числом','err');
+
+      const body = { id };
+      if(name) body.name = name;
+      if(description) body.description = description;
+      if(price_raw){
+        const pc = Number(price_raw);
+        if(!Number.isInteger(pc) || pc<0) return toast('price_cents должен быть неотрицательным целым','err');
+        body.price_cents = pc;
+      }
+      if(image_url) body.image_url = image_url;
+
+      if(Object.keys(body).length===1) return toast('Нечего обновлять','err');
+
+      await apiRequest('p-update','PUT','/api/products', body);
+      toast('Product updated','ok');
+      if(location.hash==='#/list') loadProducts();
+    });
+
+    // DELETE
+    document.getElementById('btn-p-delete-clear').addEventListener('click', ()=>{
+      document.getElementById('p-delete-id').value=''; setStatus('p-delete','–','–');
+    });
+    document.getElementById('form-p-delete').addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      const id = Number(document.getElementById('p-delete-id').value);
+      if(!Number.isInteger(id)) return toast('ID должен быть целым числом','err');
+      if(!confirm(`Удалить товар id=${id}?`)) return;
+      await apiRequest('p-delete','DELETE',`/api/products?id=${id}`);
+      toast('Product deleted','ok');
+      if(location.hash==='#/list') loadProducts();
+    });
+</script>
+</body>
+</html>

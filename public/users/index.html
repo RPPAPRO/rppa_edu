@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <title>edu_rppa · Users</title>
+    <link rel="stylesheet" href="/assets/app.css"/>
+</head>
+<body>
+<header class="topbar">
+    <div class="logo">edu_rppa</div>
+    <div class="subtitle">Users</div>
+    <nav class="links">
+        <a href="/">Home</a>
+        <a class="active" href="/users/">Users</a>
+        <a href="/products/">Products</a>
+    </nav>
+    <div class="spacer"></div>
+    <button class="btn secondary" id="btn-logout">Logout</button>
+</header>
+
+<div class="wrap">
+    <aside class="sidebar">
+        <div class="group-title">Users</div>
+        <nav class="nav" id="nav">
+            <a href="#/list"   data-route="/list">List (GET)</a>
+            <a href="#/get"    data-route="/get">Get by ID (GET)</a>
+            <a href="#/create" data-route="/create">Create (POST)</a>
+            <a href="#/update" data-route="/update">Update (PUT)</a>
+            <a href="#/delete" data-route="/delete">Delete (DELETE)</a>
+        </nav>
+    </aside>
+
+    <main class="content">
+        <!-- LIST -->
+        <section class="card route" data-route="/list">
+            <h2>List users</h2>
+            <div class="desc">GET <code>/api/users</code></div>
+            <div class="actions">
+                <button class="btn" id="btn-ulist-refresh">Refresh</button>
+                <input id="u-filter" placeholder="Фильтр по name/email…"/>
+            </div>
+            <div class="table-wrap mt12">
+                <table id="u-table">
+                    <thead><tr><th>ID</th><th>Name</th><th>Email</th><th>Created At</th></tr></thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            <div class="statusbar mt10">
+                <div class="badge" id="u-list-status">status: –</div>
+                <div class="badge" id="u-list-time">time: – ms</div>
+                <div class="spacer"></div>
+            </div>
+        </section>
+
+        <!-- GET -->
+        <section class="card route" data-route="/get" hidden>
+            <h2>Get user by ID</h2>
+            <div class="desc">GET <code>/api/users?id=…</code></div>
+            <form class="form" id="form-u-get">
+                <div class="row"><label for="u-get-id">ID</label><input id="u-get-id" type="number" required/></div>
+                <div class="actions">
+                    <button class="btn" type="submit">Fetch</button>
+                    <button class="btn secondary" type="button" id="btn-u-get-clear">Clear</button>
+                </div>
+            </form>
+            <pre id="u-get-output" class="mt12">—</pre>
+            <div class="statusbar mt10">
+                <div class="badge" id="u-get-status">status: –</div>
+                <div class="badge" id="u-get-time">time: – ms</div>
+                <div class="spacer"></div>
+            </div>
+        </section>
+
+        <!-- CREATE -->
+        <section class="card route" data-route="/create" hidden>
+            <h2>Create user</h2>
+            <div class="desc">POST <code>/api/users</code></div>
+            <form class="form" id="form-u-create">
+                <div class="row"><label>Name</label><input id="u-create-name" required/></div>
+                <div class="row"><label>Email</label><input id="u-create-email" type="email" required/></div>
+                <div class="actions">
+                    <button class="btn" type="submit">Create</button>
+                    <button class="btn secondary" type="button" id="btn-u-create-clear">Clear</button>
+                </div>
+            </form>
+            <div class="statusbar mt10">
+                <div class="badge" id="u-create-status">status: –</div>
+                <div class="badge" id="u-create-time">time: – ms</div>
+                <div class="spacer"></div>
+            </div>
+        </section>
+
+        <!-- UPDATE -->
+        <section class="card route" data-route="/update" hidden>
+            <h2>Update user</h2>
+            <div class="desc">PUT <code>/api/users</code></div>
+            <form class="form" id="form-u-update">
+                <div class="row"><label>ID</label><input id="u-update-id" type="number" required/></div>
+                <div class="row"><label>Name</label><input id="u-update-name"/></div>
+                <div class="row"><label>Email</label><input id="u-update-email" type="email"/></div>
+                <div class="actions">
+                    <button class="btn" type="submit">Update</button>
+                    <button class="btn secondary" type="button" id="btn-u-update-clear">Clear</button>
+                </div>
+            </form>
+            <div class="statusbar mt10">
+                <div class="badge" id="u-update-status">status: –</div>
+                <div class="badge" id="u-update-time">time: – ms</div>
+                <div class="spacer"></div>
+            </div>
+        </section>
+
+        <!-- DELETE -->
+        <section class="card route" data-route="/delete" hidden>
+            <h2>Delete user</h2>
+            <div class="desc">DELETE <code>/api/users?id=…</code></div>
+            <form class="form" id="form-u-delete">
+                <div class="row"><label>ID</label><input id="u-delete-id" type="number" required/></div>
+                <div class="actions">
+                    <button class="btn danger" type="submit">Delete</button>
+                    <button class="btn secondary" type="button" id="btn-u-delete-clear">Clear</button>
+                </div>
+            </form>
+            <div class="statusbar mt10">
+                <div class="badge" id="u-delete-status">status: –</div>
+                <div class="badge" id="u-delete-time">time: – ms</div>
+                <div class="spacer"></div>
+            </div>
+        </section>
+    </main>
+</div>
+
+<div class="loader" id="loader"></div>
+<div class="toasts" id="toasts"></div>
+<script src="/assets/app.js"></script>
+<script>
+    // общие
+    bindLogout('#btn-logout');
+    initHashRouter('#nav', '/list', (route)=>{
+      if(route==='/list') loadUsers();
+    });
+
+    // Users logic
+    const uTableBody = document.querySelector('#u-table tbody');
+    const uFilter    = document.querySelector('#u-filter');
+
+    document.getElementById('btn-ulist-refresh').addEventListener('click', loadUsers);
+    uFilter.addEventListener('input', applyUsersFilter);
+
+    let cachedUsers = [];
+    async function loadUsers(){
+      const data = await apiRequest('u-list','GET','/api/users');
+      cachedUsers = data.users || [];
+      renderUsers(cachedUsers);
+    }
+    function renderUsers(rows){
+      uTableBody.innerHTML = rows.map(r => `
+        <tr>
+          <td>${esc(r.id)}</td>
+          <td>${esc(r.name)}</td>
+          <td>${esc(r.email)}</td>
+          <td>${esc(r.created_at)}</td>
+        </tr>
+      `).join('');
+    }
+    function applyUsersFilter(){
+      const q = uFilter.value.trim().toLowerCase();
+      if(!q) return renderUsers(cachedUsers);
+      const out = cachedUsers.filter(u =>
+        String(u.name||'').toLowerCase().includes(q) ||
+        String(u.email||'').toLowerCase().includes(q)
+      );
+      renderUsers(out);
+    }
+
+    // GET
+    document.getElementById('btn-u-get-clear').addEventListener('click', ()=>{
+      document.getElementById('u-get-id').value=''; document.getElementById('u-get-output').textContent='—';
+      setStatus('u-get','–','–');
+    });
+    document.getElementById('form-u-get').addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      const id = Number(document.getElementById('u-get-id').value);
+      if(!Number.isInteger(id)) return toast('ID должен быть целым числом','err');
+      try{
+        const data = await apiRequest('u-get','GET',`/api/users?id=${id}`);
+        document.getElementById('u-get-output').textContent = JSON.stringify(data, null, 2);
+      }catch(err){ document.getElementById('u-get-output').textContent = errText(err); }
+    });
+
+    // CREATE
+    document.getElementById('btn-u-create-clear').addEventListener('click', ()=>{
+      document.getElementById('u-create-name').value=''; document.getElementById('u-create-email').value=''; setStatus('u-create','–','–');
+    });
+    document.getElementById('form-u-create').addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      const name = document.getElementById('u-create-name').value.trim();
+      const email= document.getElementById('u-create-email').value.trim();
+      if(!name || !email) return toast('Заполните name и email','err');
+      await apiRequest('u-create','POST','/api/users',{ name, email });
+      toast('User created','ok');
+      if(location.hash==='#/list') loadUsers();
+      document.getElementById('btn-u-create-clear').click();
+    });
+
+    // UPDATE
+    document.getElementById('btn-u-update-clear').addEventListener('click', ()=>{
+      ['u-update-id','u-update-name','u-update-email'].forEach(id=>document.getElementById(id).value=''); setStatus('u-update','–','–');
+    });
+    document.getElementById('form-u-update').addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      const id = Number(document.getElementById('u-update-id').value);
+      const name = document.getElementById('u-update-name').value.trim();
+      const email= document.getElementById('u-update-email').value.trim();
+      if(!Number.isInteger(id)) return toast('ID должен быть целым числом','err');
+      if(!name && !email) return toast('Укажите новое name/email','err');
+      await apiRequest('u-update','PUT','/api/users',{ id, name: name||undefined, email: email||undefined });
+      toast('User updated','ok');
+      if(location.hash==='#/list') loadUsers();
+    });
+
+    // DELETE
+    document.getElementById('btn-u-delete-clear').addEventListener('click', ()=>{
+      document.getElementById('u-delete-id').value=''; setStatus('u-delete','–','–');
+    });
+    document.getElementById('form-u-delete').addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      const id = Number(document.getElementById('u-delete-id').value);
+      if(!Number.isInteger(id)) return toast('ID должен быть целым числом','err');
+      if(!confirm(`Удалить пользователя id=${id}?`)) return;
+      await apiRequest('u-delete','DELETE',`/api/users?id=${id}`);
+      toast('User deleted','ok');
+      if(location.hash==='#/list') loadUsers();
+    });
+</script>
+</body>
+</html>
