@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <title>edu_rppa · Orders</title>
+    <link rel="stylesheet" href="/assets/app.css"/>
+    <style>
+        .cards{display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:14px}
+        .p-card{background:var(--panel); border:1px solid rgba(255,255,255,.08); border-radius:14px; padding:12px}
+        .p-name{font-weight:700; margin:0 0 6px}
+        .p-desc{color:var(--muted); font-size:12px; min-height:32px}
+        .p-price{margin-top:6px}
+        .qty{display:flex; align-items:center; gap:8px; margin-top:10px}
+        .qty input{width:70px; text-align:center}
+        .totals{display:flex; gap:12px; align-items:center; flex-wrap:wrap}
+        .flex{display:flex; gap:12px; align-items:center; flex-wrap:wrap}
+        .grow{flex:1}
+    </style>
+</head>
+<body>
+<header class="topbar">
+    <div class="logo">edu_rppa</div>
+    <div class="subtitle">Orders</div>
+    <nav class="links">
+        <a href="/">Home</a>
+        <a href="/users/">Users</a>
+        <a href="/products/">Products</a>
+        <a class="active" href="/orders/">Orders</a>
+    </nav>
+    <div class="spacer"></div>
+    <button class="btn secondary" id="btn-logout">Logout</button>
+</header>
+
+<main class="content">
+    <section class="card">
+        <h2>Выбор товаров</h2>
+        <div class="desc">Накликайте нужные количества; ниже обновляется JSON корзины и cookies.</div>
+
+        <div class="actions">
+            <button class="btn" id="btn-load">Обновить список товаров</button>
+            <input id="p-filter" placeholder="Фильтр по name/description…"/>
+            <div class="spacer"></div>
+            <div class="totals">
+                <span class="badge" id="badge-count">items: 0</span>
+                <span class="badge" id="badge-sum">total: 0.00</span>
+                <button class="btn" id="btn-clear">Очистить корзину</button>
+            </div>
+        </div>
+
+        <div class="cards mt12" id="cards"></div>
+
+        <div class="flex mt12">
+            <div class="grow">
+                <h3 style="margin:6px 0">Cart JSON (payload → POST /api/orders)</h3>
+                <pre id="cart-json">—</pre>
+            </div>
+            <div class="grow">
+                <h3 style="margin:6px 0">Cookies (raw & parsed)</h3>
+                <pre id="cookies-json">—</pre>
+            </div>
+        </div>
+
+        <div class="actions mt12">
+            <button class="btn" id="btn-create">Создать заказ</button>
+        </div>
+
+        <div class="statusbar mt10">
+            <div class="badge" id="orders-status">status: –</div>
+            <div class="badge" id="orders-time">time: – ms</div>
+            <div class="spacer"></div>
+        </div>
+    </section>
+</main>
+
+<div class="loader" id="loader"></div>
+<div class="toasts" id="toasts"></div>
+<script src="/assets/app.js"></script>
+<script>
+    bindLogout('#btn-logout');
+
+    const cards   = document.getElementById('cards');
+    const filterI = document.getElementById('p-filter');
+    const badgeCount = document.getElementById('badge-count');
+    const badgeSum   = document.getElementById('badge-sum');
+    const cartPre = document.getElementById('cart-json');
+    const cookiesPre = document.getElementById('cookies-json');
+
+    let allProducts = [];
+    let cart = {}; // { product_id: qty }
+
+    document.getElementById('btn-load').addEventListener('click', loadProducts);
+    document.getElementById('btn-clear').addEventListener('click', ()=>{ cart={}; renderCart(); renderProducts(); });
+    document.getElementById('btn-create').addEventListener('click', createOrder);
+    filterI.addEventListener('input', renderProducts);
+
+    showCookies();
+    loadProducts();
+
+    function showCookies(){
+      const raw = document.cookie || '';
+      const parsed = raw.split(';').reduce((acc,p)=>{
+        const i=p.indexOf('='); if(i>0) acc[p.slice(0,i).trim()] = decodeURIComponent(p.slice(i+1)); return acc;
+      }, {});
+      cookiesPre.textContent = JSON.stringify({ raw, parsed }, null, 2);
+    }
+
+    async function loadProducts(){
+      const data = await apiRequest('orders','GET','/api/products');
+      allProducts = data.products || [];
+      renderProducts();
+    }
+
+    function renderProducts(){
+      const q = (filterI.value||'').trim().toLowerCase();
+      const rows = q ? allProducts.filter(p =>
+        String(p.name||'').toLowerCase().includes(q) ||
+        String(p.description||'').toLowerCase().includes(q)
+      ) : allProducts;
+
+      cards.innerHTML = rows.map(p => {
+        const qty = cart[p.id] || 0;
+        return `
+          <div class="p-card">
+            <div class="p-name">${esc(p.name)}</div>
+            <div class="p-desc">${esc(p.description || '')}</div>
+            <div class="p-price">Price: ${(Number(p.price_cents)/100).toFixed(2)}</div>
+            <div class="qty">
+              <button class="btn secondary" data-act="dec" data-id="${p.id}">-</button>
+              <input data-id="${p.id}" value="${qty}" inputmode="numeric"/>
+              <button class="btn secondary" data-act="inc" data-id="${p.id}">+</button>
+              <a class="btn secondary" href="${esc(p.image_url||'#')}" target="_blank" rel="noopener">image</a>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      // wire controls
+      cards.querySelectorAll('button[data-act="inc"]').forEach(btn=>{
+        btn.addEventListener('click', ()=>{
+          const id = Number(btn.dataset.id);
+          cart[id] = (cart[id]||0) + 1;
+          renderProducts(); renderCart();
+        });
+      });
+      cards.querySelectorAll('button[data-act="dec"]').forEach(btn=>{
+        btn.addEventListener('click', ()=>{
+          const id = Number(btn.dataset.id);
+          cart[id] = Math.max(0, (cart[id]||0) - 1);
+          if(cart[id]===0) delete cart[id];
+          renderProducts(); renderCart();
+        });
+      });
+      cards.querySelectorAll('input[data-id]').forEach(inp=>{
+        inp.addEventListener('change', ()=>{
+          const id = Number(inp.dataset.id);
+          let v = Number(inp.value);
+          if(!Number.isInteger(v) || v<0) v = 0;
+          if(v===0) delete cart[id]; else cart[id]=v;
+          renderProducts(); renderCart();
+        });
+      });
+    }
+
+    function renderCart(){
+      const items = Object.entries(cart).map(([pid, qty])=>({ product_id: Number(pid), qty: Number(qty) }))
+                                    .filter(x=>x.qty>0);
+      cartPre.textContent = JSON.stringify({ items }, null, 2);
+
+      // посчитаем локально total (для UI), берём текущие цены
+      let sum = 0, count = 0;
+      for(const {product_id, qty} of items){
+        const p = allProducts.find(x=>x.id===product_id);
+        if(!p) continue;
+        sum += Number(p.price_cents||0) * qty;
+        count += qty;
+      }
+      badgeSum.textContent = 'total: ' + (sum/100).toFixed(2);
+      badgeCount.textContent = 'items: ' + count;
+    }
+
+    async function createOrder(){
+      const items = Object.entries(cart).map(([pid, qty])=>({ product_id: Number(pid), qty: Number(qty) }))
+                                    .filter(x=>x.qty>0);
+      if(items.length===0) return toast('Корзина пуста','err');
+      try{
+        const res = await apiRequest('orders','POST','/api/orders', { items });
+        toast('Заказ создан: #'+res.order.id, 'ok');
+        cart = {};
+        renderProducts(); renderCart();
+      }catch(err){
+        toast(err.message || 'Ошибка создания заказа','err');
+      }
+    }
+</script>
+</body>
+</html>

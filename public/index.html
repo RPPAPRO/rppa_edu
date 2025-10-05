@@ -3,30 +3,57 @@
 <head>
     <meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width,initial-scale=1"/>
-    <title>edu_rppa · Home</title>
+    <title>edu_rppa · Главная</title>
     <link rel="stylesheet" href="/assets/app.css"/>
+    <style>
+        ul.navlist {list-style:none; padding:0; margin:16px 0;}
+        ul.navlist li {margin:10px 0;}
+        ul.navlist li a {color:var(--link); font-weight:500; text-decoration:none;}
+        ul.navlist li a:hover {text-decoration:underline;}
+        .logo-big {font-size:32px; font-weight:700; color:var(--accent);}
+        .desc {color:var(--muted);}
+    </style>
 </head>
 <body>
 <header class="topbar">
     <div class="logo">edu_rppa</div>
-    <div class="subtitle">Welcome</div>
+    <div class="subtitle">Главная</div>
+    <nav class="links">
+        <a href="/users/">Users</a>
+        <a href="/products/">Products</a>
+        <a href="/orders/">Orders</a>
+    </nav>
     <div class="spacer"></div>
     <button class="btn secondary" id="btn-logout">Logout</button>
 </header>
 
-<main class="center">
-    <h1 class="h1">Демо-система</h1>
-    <p class="muted">Выберите раздел:</p>
-    <div class="grid2">
-        <a class="tile" href="/users/"><span>Users</span><small>CRUD операции</small></a>
-        <a class="tile" href="/products/"><span>Products</span><small>CRUD операции</small></a>
-    </div>
+<main class="content">
+    <section class="card">
+        <div class="logo-big">edu_rppa</div>
+        <p class="desc">
+            Демонстрационное приложение для обучения архитектуре информационных систем.<br>
+            Здесь можно увидеть, как работает связка <b>Frontend ↔ API ↔ Database</b> на Cloudflare Pages + D1.
+        </p>
+
+        <h3>Разделы приложения</h3>
+        <ul class="navlist">
+            <li>👤 <a href="/users/">Users</a> — управление пользователями (создание, изменение, удаление).</li>
+            <li>📦 <a href="/products/">Products</a> — каталог товаров, CRUD-операции и хранение изображений.</li>
+            <li>🛒 <a href="/orders/">Orders</a> — оформление заказа: добавление товаров в корзину и сохранение JSON в базе.</li>
+        </ul>
+
+        <p class="desc">
+            Каждый раздел демонстрирует разные аспекты построения приложений:<br>
+            работа с базой данных D1, авторизация через cookie и отображение данных в реальном времени.
+        </p>
+    </section>
 </main>
 
 <div class="loader" id="loader"></div>
 <div class="toasts" id="toasts"></div>
 <script src="/assets/app.js"></script>
 <script>
+    // обработка выхода
     bindLogout('#btn-logout');
 </script>
 </body>
