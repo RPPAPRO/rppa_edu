@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://rppa-edu.pages.dev/sitemap.xml
