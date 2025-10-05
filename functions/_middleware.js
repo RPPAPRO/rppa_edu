@@ -2,21 +2,36 @@
 export async function onRequest(ctx) {
   const { request, env } = ctx;
   const url = new URL(request.url);
+  const path = url.pathname;
 
-  // Открытые маршруты:
-  const open = [
+  // Открытые маршруты (логин, статика, auth-API, главная)
+  const openExact = new Set([
     '/', '/index.html',
     '/login.html',
-    '/assets/app.css', '/assets/app.js',
-    '/api/auth/request-code', '/api/auth/verify-code', '/api/auth/logout'
-  ];
-  if (open.some(p => url.pathname === p)) return;
+    '/api/auth/request-code',
+    '/api/auth/verify-code',
+    '/api/auth/logout',
+  ]);
 
-  // Проверяем cookie sid
-  const sid = parseCookie(request.headers.get('cookie') || '')['sid'];
+  const isOpen =
+    openExact.has(path) ||
+    path.startsWith('/assets/') ||      // CSS/JS
+    path.startsWith('/favicon') ||      // фавиконки
+    path.startsWith('/robots.txt') ||   // служебное
+    path.startsWith('/_workers/') ||    // служебное
+    path.startsWith('/.well-known/');   // служебное
+
+  if (isOpen) {
+    // важно: пропускаем дальше к статике/функциям
+    return ctx.next();
+  }
+
+  // --- проверка сессии ---
+  const cookies = parseCookie(request.headers.get('cookie') || '');
+  const sid = cookies['sid'];
   if (!sid) return redirectToLogin(url);
 
-  // Верифицируем сессию в D1
+  // верифицируем сессию
   const row = await env.edu_rppa_db
     .prepare('SELECT email, expires_at FROM sessions WHERE session_id = ?')
     .bind(sid).first();
@@ -26,11 +41,12 @@ export async function onRequest(ctx) {
     return redirectToLogin(url);
   }
 
-  // всё ок — пропускаем дальше
+  // ок — даём продолжить
+  return ctx.next();
 }
 
 function redirectToLogin(url) {
-  const to = '/login.html?next=' + encodeURIComponent(url.pathname);
+  const to = '/login.html?next=' + encodeURIComponent(url.pathname + url.search);
   return Response.redirect(to, 302);
 }
 
