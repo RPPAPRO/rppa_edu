@@ -16,12 +16,16 @@
 <main class="content-narrow">
     <section class="card">
         <h2>Вход по e-mail</h2>
-        <p class="desc">Мы отправим 6-значный код на почту. В демо-режиме код вернётся в ответе/логах.</p>
+        <p class="desc">Укажите e-mail. Если вы впервые, можно сразу ввести имя — мы создадим пользователя в БД.</p>
 
         <form class="form" id="form-send">
             <div class="row">
                 <label for="email">Email</label>
                 <input id="email" type="email" placeholder="you@example.com" required/>
+            </div>
+            <div class="row">
+                <label for="name">Name (optional)</label>
+                <input id="name" placeholder="Ваше имя (если впервые)"/>
             </div>
             <div class="actions">
                 <button class="btn" type="submit" id="btn-send">Получить код</button>
@@ -49,14 +53,16 @@
 <script>
     const out = document.getElementById('output');
     const emailEl = document.getElementById('email');
+    const nameEl  = document.getElementById('name');
     const codeEl  = document.getElementById('code');
     const next = new URLSearchParams(location.search).get('next') || '/';
 
     document.getElementById('form-send').addEventListener('submit', async (e)=>{
       e.preventDefault();
       const email = emailEl.value.trim();
+      const name  = nameEl.value.trim();
       if(!email) return toast('Введите e-mail','err');
-      const res = await apiRequest('auth-send','POST','/api/auth/request-code',{ email }).catch(err=>err);
+      const res = await apiRequest('auth-send','POST','/api/auth/request-code',{ email, name }).catch(err=>err);
       out.textContent = JSON.stringify(res, null, 2);
       if(res && res.demo_code) {
         codeEl.value = res.demo_code;

@@ -76,3 +76,21 @@ function bindLogout(selector){
     location.href = '/login.html';
   });
 }
+
+// === User badge in topbar (optional) ===
+(function showUser(){
+  try{
+    const cookies = document.cookie.split(';').reduce((acc,p)=>{
+      const i=p.indexOf('='); if(i>0) acc[p.slice(0,i).trim()] = decodeURIComponent(p.slice(i+1)); return acc;
+    }, {});
+    if(!cookies.u) return;
+    const u = JSON.parse(cookies.u);
+    const bar = document.querySelector('.topbar');
+    if(!bar) return;
+    const span = document.createElement('span');
+    span.className = 'badge';
+    span.textContent = `Signed in: ${u.name || u.email}`;
+    bar.insertBefore(span, bar.querySelector('.spacer'));
+  }catch{}
+})();
+
